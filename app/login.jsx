@@ -12,6 +12,7 @@ import Button from '../components/Button';
 import { supabase } from '../lib/supabase';
 import Icon from '../assets/icons';
 import Input from '../components/Input';
+import sessionApi from '../services/sessionApi'; // nhớ import đúng
 
 const Login = () => {
 
@@ -21,26 +22,52 @@ const Login = () => {
   
   const router = useRouter();
 
-  const onSubmit = async ()=>{
-    if(!emailRef.current || !passwordRef.current){
-        Alert.alert('Login', "Please fill all the fields!");
-        return;
+  const onSubmit = async () => {
+    if (!emailRef.current || !passwordRef.current) {
+      Alert.alert('Login', "Please fill all the fields!");
+      return;
     }
-
-    let email = emailRef.current.trim();
-    let password = passwordRef.current.trim();
-
+  
+    const email = emailRef.current.trim();
+    const password = passwordRef.current.trim();
+  
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: password,
-    })
-
-    if (error) Alert.alert('Login', error.message)
-    setLoading(false)
-
-    // setLoading(true);
-}
+  
+    try {
+      const response = await sessionApi.create({
+        session: {
+          email: email,
+          password: password,
+          remember_me: "1",  // mobile luôn remember
+        }
+      });
+  
+      if (response.user) {
+        // Nếu login thành công, lưu token
+        await AsyncStorage.setItem('token', response.tokens.access.token);
+        await AsyncStorage.setItem('remember_token', response.tokens.access.token);
+  
+        // Có thể dispatch fetchUser() nếu bạn dùng redux
+        // dispatch(fetchUser()); 
+  
+        router.replace("/home"); // điều hướng sang trang home
+      }
+  
+      if (response.flash) {
+        Alert.alert('Login', response.flash[1]); // flashMessage nếu có
+      }
+  
+      if (response.status === 401) {
+        // Hiển thị lỗi login sai
+        Alert.alert('Login', 'Email or password incorrect');
+      }
+    } catch (error) {
+      console.log('Login error', error);
+      Alert.alert('Login', error.message || 'An error occurred during login');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <ScreenWrapper bg={'white'}>
@@ -87,7 +114,7 @@ const Login = () => {
           <Text style={styles.footerText}>
             Dont't have an account? 
           </Text>
-          <Pressable onPress={()=> router.navigate('/signUp')}>
+          <Pressable onPress={()=>  router.navigate('/signUp')}>
             <Text style={[styles.footerText, {color: theme.colors.primaryDark, fontWeight: theme.fonts.semibold}]}>Sign up</Text>
           </Pressable>
         </View>

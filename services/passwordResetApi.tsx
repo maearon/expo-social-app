@@ -31,11 +31,11 @@ export interface PasswordResetUpdateField {
 const passwordResetApi = {
   create(params: CreateParams): Promise<CreateResponse> {
     const url = '/password_resets';
-    return API.post(url, params);
+    return API.post(url, params).then(response => response.data as CreateResponse);
   },
   update(reset_token: string, params: UpdateParams): Promise<UpdateResponse> {
     const url = `/password_resets/${reset_token}`;
-    return API.patch(url, params);
+    return API.put(url, params).then(response => response.data as UpdateResponse);
   }
 };
 
