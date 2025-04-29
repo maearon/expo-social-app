@@ -13,6 +13,7 @@ import { supabase } from '../lib/supabase';
 import Icon from '../assets/icons';
 import Input from '../components/Input';
 import sessionApi from '../services/sessionApi'; // nhớ import đúng
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Login = () => {
 
@@ -43,6 +44,7 @@ const Login = () => {
       });
   
       if (response.user) {
+        console.log('Login response', response);
         // Nếu login thành công, lưu token
         await AsyncStorage.setItem('token', response.tokens.access.token);
         await AsyncStorage.setItem('remember_token', response.tokens.access.token);
