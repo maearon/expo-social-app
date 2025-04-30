@@ -8,6 +8,13 @@ export interface User {
   name: string
   role: boolean
   avatar?: string
+  phoneNumber?: string
+  address?: string
+  bio?: string
+  image?: string | null
+  createdAt?: string
+  updatedAt?: string
+  [key: string]: any
 }
 
 export interface UserState {

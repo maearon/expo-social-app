@@ -9,20 +9,30 @@ import ScreenWrapper from '../../components/ScreenWrapper'
 import Button from '../../components/Button'
 import BackButton from '../../components/BackButton'
 import * as ImagePicker from 'expo-image-picker';
-import { updateUser } from '../../services/userService'
+// import { updateUser } from '../../services/userService'
 import { getFilePath, getUserImageSrc, uploadFile } from '../../services/imageService'
 import { Image } from 'expo-image';
 import Header from '../../components/Header'
 import Icon from '../../assets/icons'
 import Input from '../../components/Input'
+import { useAppSelector } from "../../redux/hooks"
+import { fetchUser, selectUser } from "../../redux/session/sessionSlice"
+import userApi, { UserEdit } from '../../services/userApi'
 
 
 const EditProfile = () => {
-  const {user: currentUser, setUserData} = useAuth();
+  // const {user: currentUser, setUserData} = useAuth();
+  const currentUser = useAppSelector(selectUser)
   const router = useRouter();
   const [profileModal, toggleProfileModal] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState({
+  const [user, setUser] = useState<{
+    name: string;
+    phoneNumber: string;
+    image: { uri: string } | string | null;
+    bio: string;
+    address: string;
+  }>({
     name: '',
     phoneNumber: '',
     image: null,
@@ -33,11 +43,11 @@ const EditProfile = () => {
   useEffect(()=>{
     if(currentUser){
         setUser({
-            name: currentUser.name || '',
-            phoneNumber: currentUser.phoneNumber || '',
-            image: currentUser.image || null,
-            address: currentUser.address || '',
-            bio: currentUser.bio || '',
+            name: currentUser.value.name || '',
+            phoneNumber: currentUser.value.phoneNumber || '',
+            image: currentUser.value.image || null,
+            address: currentUser.value.address || '',
+            bio: currentUser.value.bio || '',
         });
     }
   },[currentUser]);
@@ -54,7 +64,7 @@ const EditProfile = () => {
     });
 
     if (!result.canceled) {
-      setUser({...user, image: result.assets[0]});
+      setUser({...user, image: result.assets[0].uri});
     }
   };
 
@@ -67,18 +77,33 @@ const EditProfile = () => {
     }
     
     setLoading(true);
-    if(typeof image == 'object'){
+    if(image && typeof image === 'object' && 'uri' in image){
       let imageResult = await uploadFile('profiles', image?.uri, true);
-      if(imageResult.success) userData.image = imageResult.data;
+      if(imageResult.success) userData.image = imageResult.data ?? null;
       else userData.image = null;
     }
     
-    const res = await updateUser(currentUser?.id, userData);
-    setLoading(false);
-    if(res.success){
-      setUserData({...currentUser, ...userData});
-      router.back();
-    }
+    // const res = await updateUser(currentUser?.value?.id, userData);
+    // setLoading(false);
+    // if(res.success){
+    //   setUserData({...currentUser, ...userData});
+    //   router.back();
+    // }
+    userApi.update(currentUser.value.id as string,
+      { 
+        user: {
+          name: userData.name,
+          email: currentUser.value.email,
+          password: 'foobar',
+          password_confirmation: 'foobar'
+        },
+      }
+    ).then(response => {
+      Alert.alert('Success', 'User updated successfully!');
+    })
+    .catch(error => {
+      console.log(error)
+    })
 
     // good to go
   }
@@ -89,7 +114,11 @@ const EditProfile = () => {
     <ScreenWrapper bg="white">
         <View style={styles.container}>
             <ScrollView style={{flex: 1}}>   
-                <Header title="Edit Profile" />
+                <Header 
+                  title="Edit Profile" 
+                  onBackPress={() => router.back()} 
+                  rightComponent={null} 
+                />
                
                 {/* form */}
                 <View style={styles.form}>
@@ -108,34 +137,34 @@ const EditProfile = () => {
                       placeholder='Enter your name'
                       placeholderTextColor={theme.colors.textLight}
                       value={user.name}
-                      onChangeText={value=> setUser({...user, name: value})}
+                      onChangeText={(value: any)=> setUser({...user, name: value})}
                     />
                     <Input
                       icon={<Icon name="call" size={26} />}
                       placeholder='Enter your phone number'
                       placeholderTextColor={theme.colors.textLight}
                       value={user.phoneNumber}
-                      onChangeText={value=> setUser({...user, phoneNumber: value})}
+                      onChangeText={(value: any)=> setUser({...user, phoneNumber: value})}
                     />
                     <Input
                       icon={<Icon name="location" size={26} />}
                       placeholder='Enter your address'
                       placeholderTextColor={theme.colors.textLight}
                       value={user.address}
-                      onChangeText={value=> setUser({...user, address: value})}
+                      onChangeText={(value: any)=> setUser({...user, address: value})}
                     />
 
                     <Input
                       placeholder='Enter your bio'
                       placeholderTextColor={theme.colors.textLight}
-                      onChangeText={value=> setUser({...user, bio: value})}
+                      onChangeText={(value: any)=> setUser({...user, bio: value})}
                       multiline={true}
                       value={user.bio}
                       containerStyle={styles.bio}
                     />
 
                     {/* button */}
-                    <Button title="Update" loading={loading} onPress={onSubmit} />
+                    <Button title="Update" loading={loading} onPress={onSubmit} buttonStyle={undefined} textStyle={undefined} />
                 </View>
                     
             </ScrollView>
