@@ -89,6 +89,7 @@ const EditProfile = () => {
     //   setUserData({...currentUser, ...userData});
     //   router.back();
     // }
+    setLoading(false);
     userApi.update(currentUser.value.id as string,
       { 
         user: {

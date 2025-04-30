@@ -158,6 +158,14 @@ const ApiService = {
     }
   },
 
+  patch: async (url: string, data: any) => {
+    try {
+      return await API.patch(url, data)
+    } catch (error) {
+      throw error
+    }
+  },
+
   delete: async (url: string) => {
     try {
       return await API.delete(url)

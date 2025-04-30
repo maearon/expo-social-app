@@ -92,37 +92,41 @@ export interface Response {
 const userApi = {
   index(params: ListParams): Promise<ListResponse<User>> {
     const url = '/users';
-    return API.get(url, { params });
+    return API.get(url, { params }).then(response => response.data as ListResponse<User>);
   },
 
   create(params: CreateParams): Promise<CreateResponse<UserCreate>> {
     const url = '/users';
-    return API.post(url, params);
+    return API.post(url, params, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }).then(response => response.data as CreateResponse<UserCreate>);
   },
 
   show(id: string, params: ListParams): Promise<ShowResponse<UserShow>> {
     const url = `/users/${id}`;
-    return API.get(url, { params });
+    return API.get(url, { params }).then(response => response.data as ShowResponse<UserShow>);
   },
 
   edit(id: string): Promise<EditResponse> {
     const url = `/users/${id}/edit`;
-    return API.get(url);
+    return API.get(url).then(response => response.data as EditResponse);
   },
 
   update(id: string, params: UpdateParams): Promise<UpdateResponse> {
     const url = `/users/${id}`;
-    return API.patch(url, params);
+    return API.patch(url, params).then(response => response.data as UpdateResponse);
   },
 
   destroy(id: string): Promise<Response> {
     const url = `/users/${id}`;
-    return API.delete(url);
+    return API.delete(url).then(response => response.data as Response);
   },
 
   follow(id: string, page: number, lastUrlSegment: string): Promise<FollowResponse<UserFollow,IUserFollow>> {
     const url = `/users/${id}/${lastUrlSegment}`;
-    return API.get(url, { params: { page } });
+    return API.get(url, { params: { page } }).then(response => response.data as FollowResponse<UserFollow, IUserFollow>);
   },
 
   // following(id: string, page: number): Promise<FollowResponse<UserFollow,IUserFollow>> {
