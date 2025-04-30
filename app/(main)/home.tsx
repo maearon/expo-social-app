@@ -263,10 +263,6 @@ const HomeScreen = () => {
               item={item} 
               currentUser={userData}
               router={router} 
-              onLike={(postId: number) => {
-          console.log(`Liked post with ID: ${postId}`);
-          // Add your like handling logic here
-              }}
             />
           )}
           onEndReached={() => {

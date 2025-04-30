@@ -1,94 +1,241 @@
-"use client"
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native'
+import React, { useEffect, useState } from 'react'
+import { theme } from '../constants/theme';
+import { Image } from 'expo-image';
+import { downloadFile, getSupabaseFileUrl, getUserImageSrc } from '../services/imageService';
+import { hp, stripHtmlTags, wp } from '../helpers/common';
+import moment from 'moment';
+import RenderHtml from 'react-native-render-html';
+import Icon from '../assets/icons';
+import { Video } from 'expo-av';
+import { createPostLike, removePostLike } from '../services/postService';
+import { Share } from 'react-native';
+import Loading from './Loading';
+import Avatar from './Avatar';
 
-import { View, Text, StyleSheet, Pressable } from "react-native"
-import { useState } from "react"
-import { theme } from "../constants/theme"
-import { hp, formatTimeAgo } from "../helpers/common"
-import { Image } from "expo-image"
-import Icon from "../assets/icons"
-import Avatar from "./Avatar"
-import micropostApi from "../services/micropostApi" // Import API service directly
+const textStyle = {
+  color: theme.colors.dark,
+  fontSize: hp(1.75)
+}
 
-const PostCard = ({ item, currentUser, router, onLike }) => {
-  const [post, setPost] = useState(item)
-  const [isLiked, setIsLiked] = useState(post.postLikes?.some((like) => like.userId === currentUser?.id))
-  const [likeCount, setLikeCount] = useState(post.postLikes?.length || 0)
-  const [commentCount, setCommentCount] = useState(post.comments?.[0]?.count || 0)
+const tagsStyles = {
+  div: textStyle,
+  p: textStyle,
+  ol: textStyle,
+  h1: {
+    color: theme.colors.dark
+  },
+  h4: {
+    color: theme.colors.dark
+  },
+};
 
-  const handleLike = async () => {
-    try {
-      if (isLiked) {
-        // Unlike post - call API directly
-        await micropostApi.unlike(post.id)
-        setLikeCount((prev) => prev - 1)
-      } else {
-        // Like post - call API directly
-        await micropostApi.like(post.id)
-        setLikeCount((prev) => prev + 1)
+const PostCard = ({
+  item,
+  currentUser,
+  router,
+  showMoreIcon=true,
+  hasShadow=true,
+  showDelete=false,
+  onDelete=()=>{},
+  onEdit=()=>{}
+}) => {
+  const [likes, setLikes] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const liked = likes.filter(like=> like.userId==currentUser?.id)[0]? true: false;
+  const createdAt = moment(item?.created_at).format('MMM D');
+  const htmlBody = { html: item?.body };
+  const shadowStyles = {
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 1,
+  }
+  // console.log('item: ', item.comments);
+
+  useEffect(()=>{
+    setLikes(item?.postLikes);
+  },[]);
+
+
+  
+  const onLike = async ()=>{
+
+    if(liked){
+      let updatedLikes = likes.filter(like=> like.userId!=currentUser?.id);
+      setLikes([...updatedLikes]);
+
+      let res = await removePostLike(item?.id, currentUser?.id);
+      console.log('res: ', res);
+      if(!res.success){
+        Alert.alert('Post', 'Something went wrong!')
       }
-      setIsLiked(!isLiked)
-
-      // If parent provided an onLike callback, call it
-      if (onLike) {
-        onLike()
+    }else{
+      let data = {
+        userId: currentUser?.id,
+        postId: item?.id,
       }
-    } catch (error) {
-      console.error("Error toggling like:", error)
+
+      setLikes([...likes, data]);
+      let res = await createPostLike(data);
+      console.log('res: ', res);
+      if(!res.success){
+        Alert.alert('Post', 'Something went wrong!')
+      }
     }
+    
   }
 
-  const navigateToPostDetails = () => {
-    router.push({
-      pathname: "(main)/postDetails",
-      params: { id: post.id },
-    })
-  }
-
-  const navigateToProfile = () => {
-    if (post.userId === currentUser.id || post.user_id === currentUser.id) {
-      router.push("profile")
-    } else {
-      router.push({
-        pathname: "(main)/userProfile",
-        params: { id: post.userId || post.user_id },
-      })
+  const onShare = async ()=>{
+    let content = {message: stripHtmlTags(item?.body)};
+    if(item?.file){
+      setLoading(true);
+      let uri = await downloadFile(getSupabaseFileUrl(item.file).uri);
+      content.url = uri;
+      setLoading(false);
     }
+    Share.share(content);
+      
   }
 
+  const handlePostDelete = ()=>{
+    Alert.alert('Confirm', 'Are you sure you want to do this?', [
+        {
+          text: 'Cancel',
+          onPress: () => console.log('Cancel delete'),
+          style: 'cancel',
+        },
+        {
+            text: 'Delete', 
+            onPress: () => onDelete(item),
+            style: 'destructive'
+        },
+    ]);
+  }
+
+  const openPostDetails = ()=>{
+    router.push({pathname: 'postDetails', params: {postId: item?.id}})
+  }
   return (
-    <View style={styles.container}>
-      {/* user info */}
-      <Pressable style={styles.userInfo} onPress={navigateToProfile}>
-        <Avatar uri={post.user?.avatar} size={hp(5)} rounded={theme.radius.sm} />
-        <View>
-          <Text style={styles.name}>{post.user?.name || post.user_name || "User"}</Text>
-          <Text style={styles.time}>{formatTimeAgo(post.createdAt || post.created_at || post.timestamp)}</Text>
-        </View>
-      </Pressable>
-
-      {/* post body */}
-      <Pressable style={styles.body} onPress={navigateToPostDetails}>
-        <Text style={styles.bodyText}>{post.body || post.content}</Text>
-        {(post.file || post.image) && (
-          <Image source={{ uri: post.file || post.image }} style={styles.image} contentFit="cover" transition={200} />
-        )}
-      </Pressable>
-
-      {/* post actions */}
-      <View style={styles.actions}>
-        <Pressable style={styles.action} onPress={handleLike}>
-          <Icon
-            name="heart"
-            size={hp(2.5)}
-            color={isLiked ? theme.colors.rose : theme.colors.text}
-            fill={isLiked ? theme.colors.rose : "transparent"}
+    <View style={[styles.container, hasShadow && shadowStyles]}>
+      <View style={styles.header}>
+        {/* user info and post time */}
+        <View style={styles.userInfo}>
+          <Avatar 
+            size={hp(4.5)}
+            uri={item?.user?.image}
+            rounded={theme.radius.md}
           />
-          <Text style={styles.actionText}>{likeCount}</Text>
-        </Pressable>
-        <Pressable style={styles.action} onPress={navigateToPostDetails}>
-          <Icon name="message-circle" size={hp(2.5)} color={theme.colors.text} />
-          <Text style={styles.actionText}>{commentCount}</Text>
-        </Pressable>
+          <View style={{gap: 2}}>
+            <Text style={styles.username}>{item?.user?.name}</Text>
+            <Text style={styles.postTime}>{createdAt}</Text>
+          </View>
+        </View>
+
+        {/* actions */}
+        {
+          showMoreIcon && (
+            <TouchableOpacity onPress={openPostDetails}>
+              <Icon name="threeDotsHorizontal" size={hp(3.4)} strokeWidth={3} color={theme.colors.text} />
+            </TouchableOpacity>
+          )
+        }
+        {
+          showDelete && currentUser.id==item.userId && (
+            <View style={styles.actions}>
+              <TouchableOpacity onPress={()=> onEdit(item)}>
+                <Icon name="edit" size={hp(2.5)} color={theme.colors.text} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handlePostDelete}>
+                <Icon name="delete" size={hp(2.5)} color={theme.colors.rose} />
+              </TouchableOpacity>
+            </View>
+          )
+        }
+      </View>
+
+      {/* post image & body */}
+      <View style={styles.content}>
+        <View style={styles.postBody}>
+          {
+            item?.body && (
+              <RenderHtml
+                contentWidth={wp(100)}
+                source={htmlBody}
+                tagsStyles={tagsStyles}
+                render
+              />
+            )
+          }
+        </View>
+        
+        {/* post image */}
+        {
+          item?.file && item?.file?.includes('postImages') && (
+            <Image 
+              source={getSupabaseFileUrl(item?.file)}
+              transition={100}
+              style={styles.postMedia}
+              contentFit='cover'
+            />
+          )
+        }
+
+        {/* post video */}
+        {
+          item?.file && item?.file?.includes('postVideos') && (
+            <Video
+              style={[styles.postMedia, {height: hp(30)}]}
+              source={getSupabaseFileUrl(item?.file)}
+              useNativeControls
+              resizeMode="cover"
+              isLooping
+            />
+          )
+        }
+      </View>
+
+      {/* like & comment */}
+      <View style={styles.footer}>
+        <View style={styles.footerButton}>
+          <TouchableOpacity onPress={onLike}>
+            <Icon name="heart" fill={liked? theme.colors.rose: 'transparent'} size={24} color={liked? theme.colors.rose: theme.colors.textLight} />
+          </TouchableOpacity>
+          <Text style={styles.count}>
+            {
+              likes?.length
+            }
+          </Text>
+        </View>
+        <View style={styles.footerButton}>
+          <TouchableOpacity onPress={openPostDetails}>
+            <Icon name="comment" size={24} color={theme.colors.textLight} />
+          </TouchableOpacity>
+          <Text style={styles.count}>
+            {/* implement after adding post details modal */}
+            {/* 0 */}
+            {
+              item?.comments[0]?.count
+            }
+
+          </Text>
+        </View>
+        <View style={styles.footerButton}>
+          {
+            loading? (
+              <Loading size="small" />
+            ):(
+              <TouchableOpacity onPress={onShare}>
+                <Icon name="share" size={24} color={theme.colors.textLight} />
+              </TouchableOpacity>
+            )
+          }
+          
+        </View>
       </View>
     </View>
   )
@@ -96,54 +243,70 @@ const PostCard = ({ item, currentUser, router, onLike }) => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "white",
-    borderRadius: theme.radius.md,
-    padding: 14,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    gap: 10,
+    marginBottom: 15,
+    borderRadius: theme.radius.xxl*1.1,
+    borderCurve: 'continuous',
+    padding: 10,
+    paddingVertical: 12,
+    backgroundColor: 'white',
+    borderWidth: 0.5,
+    borderColor: theme.colors.gray,
+    shadowColor: '#000'
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between'
   },
   userInfo: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },  
+  username: {
+    fontSize: hp(1.7),
+    color: theme.colors.textDark,
+    fontWeight: theme.fonts.medium,
+  },
+  postTime: {
+    fontSize: hp(1.4),
+    color: theme.colors.textLight,
+    fontWeight: theme.fonts.medium,
+  },
+  content: {
     gap: 10,
-    marginBottom: 14,
+    // marginBottom: 10,
   },
-  name: {
-    fontSize: hp(1.8),
-    fontWeight: theme.fonts.bold,
-    color: theme.colors.text,
+  postMedia: {
+    height: hp(40),
+    width: '100%',
+    borderRadius: theme.radius.xl,
+    borderCurve: 'continuous'
   },
-  time: {
-    fontSize: hp(1.6),
-    color: theme.colors.gray,
+  postBody: {
+    marginLeft: 5,
   },
-  body: {
-    marginBottom: 14,
+  footer: {
+    flexDirection: 'row', 
+    alignItems: 'center',
+    gap: 15
   },
-  bodyText: {
-    fontSize: hp(1.8),
-    color: theme.colors.text,
-    marginBottom: 14,
-  },
-  image: {
-    width: "100%",
-    height: hp(30),
-    borderRadius: theme.radius.md,
+  footerButton: {
+    marginLeft: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4
   },
   actions: {
-    flexDirection: "row",
-    gap: 20,
+    flexDirection: 'row',
+    alignItems: 'center', 
+    gap: 18,
   },
-  action: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  actionText: {
-    fontSize: hp(1.8),
+  count: {
     color: theme.colors.text,
-  },
+    fontSize: hp(1.8)
+  }
+
 })
 
 export default PostCard
