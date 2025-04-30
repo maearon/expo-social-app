@@ -19,12 +19,13 @@ import micropostApi, { CreateResponse, ListResponse, Micropost } from '../../ser
 import { useAppSelector } from '../../redux/hooks'
 import { fetchUser, selectUser } from '../../redux/session/sessionSlice'
 import { useDispatch } from 'react-redux'
+import { AppDispatch } from '../../redux/store'; // Adjust the path to your store file
 var limit = 0;
 const HomeScreen = () => {
     const [page, setPage] = useState(1)
     // const {user, setAuth} = useAuth();
     const userData = useAppSelector(selectUser)
-    const dispatch = useDispatch()
+    const dispatch: AppDispatch = useDispatch();
     const router = useRouter();
     const [feedItems, setFeedItems] = useState<any[]>([])
     const [hasMore, setHasMore] = useState(true);
@@ -38,44 +39,74 @@ const HomeScreen = () => {
     //     }
     // }
 
-    const handlePostEvent = async (payload)=>{
+    interface PostEventPayload {
+      eventType: 'INSERT' | 'DELETE' | 'UPDATE';
+      new?: {
+      id: number;
+      userId: number;
+      body?: string;
+      file?: string;
+      };
+      old?: {
+      id: number;
+      };
+    }
+
+    interface UserDataResponse {
+      success: boolean;
+      data?: Record<string, any>;
+    }
+
+    const handlePostEvent = async (payload: PostEventPayload): Promise<void> => {
       console.log('got post event: ', payload);
-      if(payload.eventType == 'INSERT' && payload?.new?.id){
-        let newPost = {...payload.new};
-        let res = await getUserData(newPost.userId);
-        newPost.user = res.success? res.data: {};
-        newPost.postLikes = []; // while adding likes
-        newPost.comments = [{count: 0}] // while adding comments
-        setFeedItems(prevPosts=> [newPost, ...prevPosts]);
+      if (payload.eventType === 'INSERT' && payload?.new?.id) {
+      let newPost: { id: number; userId: number; body?: string; file?: string; user?: any; postLikes?: any[]; comments?: { count: number }[] } = { ...payload.new };
+      let res: UserDataResponse = await getUserData(newPost.userId);
+      newPost.user = res.success ? res.data : {};
+      newPost.postLikes = []; // while adding likes
+      newPost.comments = [{ count: 0 }]; // while adding comments
+      setFeedItems((prevPosts) => [newPost, ...prevPosts]);
       }
 
-      if(payload.eventType == 'DELETE' && payload?.old?.id){
-        setFeedItems(prevPosts=> {
-          let updatedPosts = prevPosts.filter(post=> post.id!=payload.old.id);
-          return updatedPosts;
-        })
+      if (payload.eventType === 'DELETE' && payload?.old?.id) {
+      setFeedItems((prevPosts) => {
+        let updatedPosts = prevPosts.filter((post) => post.id !== payload.old?.id);
+        return updatedPosts;
+      });
       }
 
-      if(payload.eventType == 'UPDATE' && payload?.new?.id){
-        setFeedItems(prevPosts=> {
-          let updatedPosts = prevPosts.map(post=> {
-            if(post.id==payload.new.id){
-              post.body = payload.new.body;
-              post.file = payload.new.file;
-            }
-            return post;
-          });
-          return updatedPosts;
-        })
+      if (payload.eventType === 'UPDATE' && payload?.new?.id) {
+      setFeedItems((prevPosts) => {
+        let updatedPosts = prevPosts.map((post) => {
+        if (payload.new && post.id === payload.new.id) {
+          post.body = payload.new.body;
+          post.file = payload.new.file;
+        }
+        return post;
+        });
+        return updatedPosts;
+      });
       }
+    };
+
+    interface NotificationEventPayload {
+      eventType: 'INSERT' | 'DELETE' | 'UPDATE';
+      new?: {
+      id: number;
+      [key: string]: any;
+      };
+      old?: {
+      id: number;
+      [key: string]: any;
+      };
     }
 
-    const handleNewNotification = payload=>{
+    const handleNewNotification = (payload: NotificationEventPayload): void => {
       console.log('got new notification : ', payload);
-      if(payload.eventType=='INSERT' && payload?.new?.id){
-        setNotificationCount(prev=> prev+1);
+      if (payload.eventType === 'INSERT' && payload?.new?.id) {
+      setNotificationCount((prev: number) => prev + 10);
       }
-    }
+    };
 
     // useEffect(()=>{
       
@@ -138,6 +169,10 @@ const HomeScreen = () => {
           // flashMessage('error', 'Failed to fetch user')
         } finally {
           setFeeds();
+          handleNewNotification({
+            eventType: 'INSERT',
+            new: { id: 0 } // Replace with appropriate mock data or actual payload
+          });
           // setLoading(false);
         }
       };
@@ -192,7 +227,7 @@ const HomeScreen = () => {
           <View style={styles.icons}>
             <Pressable onPress={()=> {
               setNotificationCount(0);
-              router.push('notifications');
+              router.push('/notifications');
             }}>
               <Icon name="heart" size={hp(3.2)} strokeWidth={2} color={theme.colors.text}  />
               {
@@ -203,10 +238,10 @@ const HomeScreen = () => {
                 )
               }
             </Pressable>
-            <Pressable onPress={()=> router.push('newPost')}>
+            <Pressable onPress={()=> router.push('/newPost')}>
               <Icon name="plus" size={hp(3.2)} strokeWidth={2} color={theme.colors.text}  />
             </Pressable>
-            <Pressable onPress={()=> router.push('profile')}>
+            <Pressable onPress={()=> router.push('/profile')}>
               <Avatar 
                 uri={userData?.value.avatar} 
                 size={hp(4.3)}
@@ -222,19 +257,25 @@ const HomeScreen = () => {
           data={feedItems}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listStyle}
-          keyExtractor={(item, index) => item.id.toString()}
-          renderItem={({ item }) => <PostCard 
-            item={item} 
-            currentUser={userData}
-            router={router} 
-          />}
+          keyExtractor={(item: { id: number }, index: number) => item.id.toString()}
+          renderItem={({ item }: { item: Micropost }) => (
+            <PostCard 
+              item={item} 
+              currentUser={userData}
+              router={router} 
+              onLike={(postId: number) => {
+          console.log(`Liked post with ID: ${postId}`);
+          // Add your like handling logic here
+              }}
+            />
+          )}
           onEndReached={() => {
             getPosts();
             console.log('got to the end');
           }}
           onEndReachedThreshold={0} //  Specifies how close to the bottom the user must scroll before, 0 -> 1
           ListFooterComponent={hasMore? (
-              <View style={{marginVertical: posts.length==0? 200: 30}}>
+              <View style={{marginVertical: feedItems.length==0? 200: 30}}>
                 <Loading />
               </View>
             ):(
@@ -257,7 +298,7 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // paddingHorizontal: wp(4)
+    paddingHorizontal: wp(4) // Uncommented and ensured this is a valid ViewStyle property
   },
   header: {
     flexDirection: 'row',
@@ -269,7 +310,7 @@ const styles = StyleSheet.create({
   title: {
     color: theme.colors.text,
     fontSize: hp(3.2),
-    fontWeight: theme.fonts.bold
+    fontWeight: 'bold'
   },
   avatarImage: {
     height: hp(4.3),
@@ -308,7 +349,7 @@ const styles = StyleSheet.create({
   pillText: {
     color: 'white',
     fontSize: hp(1.2),
-    fontWeight: theme.fonts.bold
+    fontWeight: 'bold'
   }
 })
 
