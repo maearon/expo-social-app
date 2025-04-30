@@ -1,8 +1,8 @@
 import { View, Text, Button, Alert, StyleSheet, Pressable, ScrollView, FlatList } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import ScreenWrapper from '../../components/ScreenWrapper'
 import { supabase } from '../../lib/supabase'
-import { useAuth } from '../../contexts/AuthContext'
+// import { useAuth } from '../../contexts/AuthContext'
 import {Svg, Circle, Path} from 'react-native-svg';
 import { theme } from '../../constants/theme'
 import Icon from '../../assets/icons'
@@ -15,11 +15,18 @@ import PostCard from '../../components/PostCard'
 import Loading from '../../components/Loading'
 import { getUserData } from '../../services/userService'
 import Avatar from '../../components/Avatar'
+import micropostApi, { CreateResponse, ListResponse, Micropost } from '../../services/micropostApi'
+import { useAppSelector } from '../../redux/hooks'
+import { fetchUser, selectUser } from '../../redux/session/sessionSlice'
+import { useDispatch } from 'react-redux'
 var limit = 0;
 const HomeScreen = () => {
-    const {user, setAuth} = useAuth();
+    const [page, setPage] = useState(1)
+    // const {user, setAuth} = useAuth();
+    const userData = useAppSelector(selectUser)
+    const dispatch = useDispatch()
     const router = useRouter();
-    const [posts, setPosts] = useState([]);
+    const [feedItems, setFeedItems] = useState<any[]>([])
     const [hasMore, setHasMore] = useState(true);
     const [notificationCount, setNotificationCount] = useState(0);
 
@@ -39,18 +46,18 @@ const HomeScreen = () => {
         newPost.user = res.success? res.data: {};
         newPost.postLikes = []; // while adding likes
         newPost.comments = [{count: 0}] // while adding comments
-        setPosts(prevPosts=> [newPost, ...prevPosts]);
+        setFeedItems(prevPosts=> [newPost, ...prevPosts]);
       }
 
       if(payload.eventType == 'DELETE' && payload?.old?.id){
-        setPosts(prevPosts=> {
+        setFeedItems(prevPosts=> {
           let updatedPosts = prevPosts.filter(post=> post.id!=payload.old.id);
           return updatedPosts;
         })
       }
 
       if(payload.eventType == 'UPDATE' && payload?.new?.id){
-        setPosts(prevPosts=> {
+        setFeedItems(prevPosts=> {
           let updatedPosts = prevPosts.map(post=> {
             if(post.id==payload.new.id){
               post.body = payload.new.body;
@@ -70,45 +77,108 @@ const HomeScreen = () => {
       }
     }
 
-    useEffect(()=>{
+    // useEffect(()=>{
       
-      // // if you want to listen to single event on a table
-      // let postsChannel = supabase
-      // .channel('posts')
-      // .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, handlePostEvent)
-      // .subscribe();
+    //   // // if you want to listen to single event on a table
+    //   // let postsChannel = supabase
+    //   // .channel('posts')
+    //   // .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, handlePostEvent)
+    //   // .subscribe();
 
 
-      // listen all events on a table
-      let postChannel = supabase
-      .channel('posts')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, handlePostEvent)
-      .subscribe();
+    //   // listen all events on a table
+    //   let postChannel = supabase
+    //   .channel('posts')
+    //   .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, handlePostEvent)
+    //   .subscribe();
 
-      let notificationChannel = supabase
-      .channel('notifications')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `receiverId=eq.${user.id}`, }, handleNewNotification)
-      .subscribe();
+    //   let notificationChannel = supabase
+    //   .channel('notifications')
+    //   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `receiverId=eq.${user.id}`, }, handleNewNotification)
+    //   .subscribe();
 
-      // getPosts();
+    //   // getPosts();
+
+    //   return ()=>{
+    //     supabase.removeChannel(postChannel);
+    //     supabase.removeChannel(notificationChannel);
+    //   }
+
+    // },[]);
+
+    const setFeeds = useCallback(async () => { 
+      micropostApi.getAll({page: page}
+      ).then(async (response: ListResponse<Micropost>) => {
+        if (response.feed_items) {
+          const updatedFeedItems = await Promise.all(
+            response.feed_items.map(async (item) => {
+              return micropostApi.transformForPostCard(item);
+            })
+          );
+          setFeedItems((prev) => [...prev, ...updatedFeedItems])
+          // setTotalCount(response.total_count)
+          // setFollowing(response.following)
+          // setFollowers(response.followers)
+          // setMicropost(response.micropost)
+          // setGavatar(response.gravatar)
+        } else {
+          setFeedItems([])
+        }
+      })
+      .catch((error: any) => {
+        // flashMessage('error', 'Set feed unsuccessfully')
+      })
+    }, [page])
+
+    useEffect(() => {
+      const fetchUserData = async () => {
+        try {
+          await dispatch(fetchUser());
+        } catch (error) {
+          // flashMessage('error', 'Failed to fetch user')
+        } finally {
+          setFeeds();
+          // setLoading(false);
+        }
+      };
+  
+      fetchUserData();
 
       return ()=>{
-        supabase.removeChannel(postChannel);
-        supabase.removeChannel(notificationChannel);
       }
-
-    },[]);
+  
+    }, [dispatch, setFeeds]);
     
     const getPosts = async ()=>{
 
       if(!hasMore) return null; // if no more posts then don't call the api
-      limit = limit+10; // get 10 more posts everytime
+      limit = limit+5; // get 10 more posts everytime
       console.log('fetching posts: ', limit);
-      let res = await fetchPosts(limit);
-      if(res.success){
-        if(posts.length==res.data.length) setHasMore(false);
-        setPosts(res.data);
-      }
+      micropostApi.getAll({page: page}
+      ).then(async (response: ListResponse<Micropost>) => {
+        if (response.feed_items) {
+          const updatedFeedItems = await Promise.all(
+            response.feed_items.map(async (item) => {
+              return micropostApi.transformForPostCard(item);
+            })
+          );
+          // setFeedItems(updatedFeedItems)
+          // setTotalCount(response.total_count)
+          // setFollowing(response.following)
+          // setFollowers(response.followers)
+          // setMicropost(response.micropost)
+          // setGavatar(response.gravatar)
+          if(response.total_count){
+            if(feedItems.length==response.total_count) setHasMore(false);
+            setFeedItems((prev) => [...prev, ...updatedFeedItems])
+          }
+        } else {
+          setFeedItems([])
+        }
+      })
+      .catch((error: any) => {
+        // flashMessage('error', 'Set feed unsuccessfully')
+      })
     }
 
   return (
@@ -138,7 +208,7 @@ const HomeScreen = () => {
             </Pressable>
             <Pressable onPress={()=> router.push('profile')}>
               <Avatar 
-                uri={user?.image} 
+                uri={userData?.value.avatar} 
                 size={hp(4.3)}
                 rounded={theme.radius.sm}
                 style={{borderWidth: 2}}
@@ -149,13 +219,13 @@ const HomeScreen = () => {
 
         {/* posts */}
         <FlatList
-          data={posts}
+          data={feedItems}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listStyle}
           keyExtractor={(item, index) => item.id.toString()}
           renderItem={({ item }) => <PostCard 
             item={item} 
-            currentUser={user}
+            currentUser={userData}
             router={router} 
           />}
           onEndReached={() => {
