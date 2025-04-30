@@ -152,6 +152,7 @@ const HomeScreen = () => {
           // setFollowers(response.followers)
           // setMicropost(response.micropost)
           // setGavatar(response.gravatar)
+          console.log('feed items 1: ', feedItems);
         } else {
           setFeedItems([])
         }
@@ -206,6 +207,7 @@ const HomeScreen = () => {
           if(response.total_count){
             if(feedItems.length==response.total_count) setHasMore(false);
             setFeedItems((prev) => [...prev, ...updatedFeedItems])
+            console.log('feed items 2: ', feedItems);
           }
         } else {
           setFeedItems([])

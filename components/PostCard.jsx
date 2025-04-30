@@ -55,6 +55,7 @@ const PostCard = ({
     shadowRadius: 6,
     elevation: 1,
   }
+  const imageSource = user.image? {uri: user.image}: require('../assets/images/avatar-placeholder.png');
   // console.log('item: ', item.comments);
 
   useEffect(()=>{
@@ -175,14 +176,12 @@ const PostCard = ({
         
         {/* post image */}
         {
-          item?.file && item?.file?.includes('postImages') && (
-            <Image 
-              source={getSupabaseFileUrl(item?.file)}
-              transition={100}
-              style={styles.postMedia}
-              contentFit='cover'
-            />
-          )
+          <Image 
+            source={imageSource}
+            transition={100}
+            style={styles.postMedia}
+            contentFit='cover'
+          />
         }
 
         {/* post video */}

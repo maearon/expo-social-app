@@ -7,7 +7,7 @@ import { theme } from '../constants/theme';
 
 const EditProfileModal = ({open, toggle}) => {
     const {user} = useAuth();
-    let imageSource = user.image? {uri: user.image}: require('../assets/images/avatar-placeholder.png');
+    const imageSource = user.image? {uri: user.image}: require('../assets/images/avatar-placeholder.png');
   return (
     <View>
       <Modal
