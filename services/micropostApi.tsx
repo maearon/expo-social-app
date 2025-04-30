@@ -71,10 +71,9 @@ const micropostApi = {
    * @param params Pagination and filter parameters
    * @returns Promise with list of microposts and metadata
    */
-  async getAll(params: ListParams): Promise<ListResponse<Micropost>> {
-    const url = "/microposts"
-    const response = await API.get(url, { params })
-    return response.data as ListResponse<Micropost>
+  getAll(params: ListParams): Promise<ListResponse<Micropost>> {
+    const url = ""
+    return API.get(url, { params }).then((response) => response.data)
   },
 
   /**
@@ -82,10 +81,9 @@ const micropostApi = {
    * @param id Micropost ID
    * @returns Promise with micropost data
    */
-  async getById(id: number): Promise<Micropost> {
+  getById(id: number): Promise<Micropost> {
     const url = `/microposts/${id}`
-    const response = await API.get(url)
-    return response.data as Micropost
+    return API.get(url).then((response) => response.data as Micropost)
   },
 
   /**
@@ -93,7 +91,7 @@ const micropostApi = {
    * @param params Micropost content and optional image
    * @returns Promise with created micropost
    */
-  async create(params: CreateMicropostParams): Promise<Micropost> {
+  create(params: CreateMicropostParams): Promise<Micropost> {
     const url = "/microposts"
 
     // If there's an image, use FormData
@@ -102,17 +100,15 @@ const micropostApi = {
       formData.append("content", params.content)
       formData.append("image", params.image)
 
-      const response = await API.post(url, formData, {
+      return API.post(url, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      })
-      return response.data as Micropost
+      }).then((response) => response.data as Micropost)
     }
 
     // Otherwise, just send JSON
-    const response_1 = await API.post(url, { content: params.content })
-    return response_1.data as Micropost
+    return API.post(url, { content: params.content }).then((response) => response.data as Micropost)
   },
 
   /**
@@ -121,7 +117,7 @@ const micropostApi = {
    * @param params Updated content and optional image
    * @returns Promise with updated micropost
    */
-  async update(id: number, params: Partial<CreateMicropostParams>): Promise<Micropost> {
+  update(id: number, params: Partial<CreateMicropostParams>): Promise<Micropost> {
     const url = `/microposts/${id}`
 
     // If there's an image, use FormData
@@ -130,18 +126,16 @@ const micropostApi = {
       if (params.content) formData.append("content", params.content)
       formData.append("image", params.image)
 
-      const response = await API.put(url, {
+      return API.put(url, {
         data: formData,
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      })
-      return response.data as Micropost
+      }).then((response) => response.data as Micropost)
     }
 
     // Otherwise, just send JSON
-    const response_1 = await API.put(url, params)
-    return response_1.data as Micropost
+    return API.put(url, params).then((response) => response.data as Micropost)
   },
 
   /**
@@ -149,10 +143,9 @@ const micropostApi = {
    * @param id Micropost ID
    * @returns Promise with response
    */
-  async remove(id: number): Promise<Response> {
+  remove(id: number): Promise<Response> {
     const url = `/microposts/${id}`
-    const response = await API.delete(url)
-    return response.data as Response
+    return API.delete(url).then((response) => response.data as Response)
   },
 
   /**
@@ -160,10 +153,9 @@ const micropostApi = {
    * @param id Micropost ID
    * @returns Promise with response
    */
-  async like(id: number): Promise<Response> {
+  like(id: number): Promise<Response> {
     const url = `/microposts/${id}/like`
-    const response = await API.post(url, {})
-    return response.data as Response
+    return API.post(url, {}).then((response) => response.data as Response)
   },
 
   /**
@@ -171,10 +163,9 @@ const micropostApi = {
    * @param id Micropost ID
    * @returns Promise with response
    */
-  async unlike(id: number): Promise<Response> {
+  unlike(id: number): Promise<Response> {
     const url = `/microposts/${id}/unlike`
-    const response = await API.delete(url)
-    return response.data as Response
+    return API.delete(url).then((response) => response.data as Response)
   },
 
   /**
@@ -205,10 +196,9 @@ const micropostApi = {
    * @param rating Rating value ('like' or 'dislike')
    * @returns Promise with response
    */
-  async likeOrDislikeYoutubeVideo(videoId: string, rating: string): Promise<Response> {
+  likeOrDislikeYoutubeVideo(videoId: string, rating: string): Promise<Response> {
     const url = `https://www.googleapis.com/youtube/v3/videos/rate?id=${videoId}&rating=${rating}`
-    const response = await API.post(url, {})
-    return response.data as Response
+    return API.post(url, {}).then((response) => response.data as Response)
   },
 
   /**

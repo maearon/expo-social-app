@@ -34,14 +34,15 @@ export const useAuth = () => {
             password,
             remember_me: rememberMe,
           }),
-        ) as { payload: { message?: string, user?: any } }
+        )
 
         if (loginUser.fulfilled.match(resultAction)) {
           return { success: true, user: resultAction.payload.user }
         } else {
+          const payload = resultAction.payload as { message?: string }
           return {
             success: false,
-            error: resultAction.payload?.message || "Login failed",
+            error: payload?.message || "Login failed",
           }
         }
       } catch (error: any) {

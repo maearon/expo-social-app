@@ -1,29 +1,49 @@
-import { View, Text, StyleSheet } from 'react-native'
-import React from 'react'
-import { hp } from '../helpers/common'
-import { theme } from '../constants/theme'
-import { getUserImageSrc } from '../services/imageService'
-import { Image } from 'expo-image'
+import { StyleSheet } from "react-native"
+import { hp } from "../helpers/common"
+import { theme } from "../constants/theme"
+import { Image } from "expo-image"
 
-const Avatar = ({
-    uri, 
-    size=hp(4.5), 
-    rounded=theme.radius.md,
-    style={}
-}) => {
+const Avatar = ({ uri, size = hp(4.5), rounded = theme.radius.md, style = {} }) => {
+  // Default placeholder image if no URI is provided
+  const defaultImage = "https://via.placeholder.com/150?text=User"
+
+  // Process the image URI
+  const getImageSource = (imageUri) => {
+    if (!imageUri) return defaultImage
+
+    // If it's already a complete URL, use it directly
+    if (imageUri.startsWith("http")) {
+      return imageUri
+    }
+
+    // If it's a Gravatar hash, construct the URL
+    if (imageUri.length === 32 && !imageUri.includes("/")) {
+      return `https://www.gravatar.com/avatar/${imageUri}?s=${Math.round(size * 2)}&d=identicon`
+    }
+
+    // For relative paths from the Rails API, construct the full URL
+    // Adjust the base URL to match your Rails API
+    const apiBaseUrl = "https://ruby-rails-boilerplate-3s9t.onrender.com"
+    return `${apiBaseUrl}${imageUri.startsWith("/") ? "" : "/"}${imageUri}`
+  }
+
   return (
-    <Image 
-        source={getUserImageSrc(uri)} 
-        transition={100}
-        style={[styles.avatar, {height: size, width: size, borderRadius: rounded}, style]}
+    <Image
+      source={{ uri: getImageSource(uri) }}
+      transition={100}
+      style={[styles.avatar, { height: size, width: size, borderRadius: rounded }, style]}
+      contentFit="cover"
     />
   )
 }
+
 const styles = StyleSheet.create({
-    avatar: {
-        borderCurve: 'continuous',
-        borderColor: theme.colors.darkLight,
-        borderWidth: 1
-    }
+  avatar: {
+    borderCurve: "continuous",
+    borderColor: theme.colors.darkLight,
+    borderWidth: 1,
+    backgroundColor: theme.colors.gray,
+  },
 })
+
 export default Avatar
