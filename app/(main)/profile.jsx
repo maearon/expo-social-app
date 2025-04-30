@@ -19,13 +19,14 @@ import Icon from "../../assets/icons"
 import Avatar from "../../components/Avatar"
 import PostCard from "../../components/PostCard"
 import Loading from "../../components/Loading"
-import { useUser } from "../../redux/hooks"
+import { useAppSelector } from "../../redux/hooks"
+import { selectUser } from "../../redux/session/sessionSlice"
 import { logoutUser } from "../../redux/session/sessionSlice"
 import micropostApi from "../../services/micropostApi"
 
 const Profile = () => {
   const router = useRouter()
-  const user = useUser()
+  const current_user = useAppSelector(selectUser)
 
   const [microposts, setMicroposts] = useState([])
   const [page, setPage] = useState(1)
@@ -57,7 +58,7 @@ const Profile = () => {
         setRefreshing(false)
       }
     },
-    [isLoading, user.id],
+    [isLoading, current_user.id],
   )
 
   useEffect(() => {
@@ -102,12 +103,12 @@ const Profile = () => {
     <ScreenWrapper bg="white">
       <FlatList
         data={microposts}
-        ListHeaderComponent={<UserHeader user={user} handleLogout={handleLogout} router={router} metadata={metadata} />}
+        ListHeaderComponent={<UserHeader user={current_user} handleLogout={handleLogout} router={router} metadata={metadata} />}
         ListHeaderComponentStyle={{ marginBottom: 30 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listStyle}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => <PostCard item={item} currentUser={user} router={router} />}
+        renderItem={({ item }) => <PostCard item={item} currentUser={current_user} router={router} />}
         onEndReached={handleLoadMore}
         onRefresh={handleRefresh}
         refreshing={refreshing}
@@ -139,7 +140,7 @@ const Profile = () => {
   )
 }
 
-const UserHeader = ({ user, handleLogout, router, metadata }) => {
+const UserHeader = ({ current_user, handleLogout, router, metadata }) => {
   return (
     <View style={{ flex: 1, backgroundColor: "white" }}>
       <View>
@@ -153,7 +154,7 @@ const UserHeader = ({ user, handleLogout, router, metadata }) => {
         <View style={{ gap: 15 }}>
           {/* avatar */}
           <View style={styles.avatarContainer}>
-            <Avatar uri={user?.avatar} size={hp(12)} rounded={theme.radius.xxl * 1.4} />
+            <Avatar uri={current_user?.avatar} size={hp(12)} rounded={theme.radius.xxl * 1.4} />
             <Pressable style={styles.editIcon} onPress={() => router.push("/editProfile")}>
               <Icon name="edit" strokeWidth={2.5} size={20} />
             </Pressable>
@@ -161,8 +162,8 @@ const UserHeader = ({ user, handleLogout, router, metadata }) => {
 
           {/* username & address */}
           <View style={{ alignItems: "center", gap: 4 }}>
-            <Text style={styles.userName}>{user?.name}</Text>
-            <Text style={styles.infoText}>{user?.address}</Text>
+            <Text style={styles.userName}>{current_user?.name}</Text>
+            <Text style={styles.infoText}>{current_user?.address}</Text>
           </View>
 
           {/* Stats */}
@@ -187,16 +188,16 @@ const UserHeader = ({ user, handleLogout, router, metadata }) => {
           <View style={{ gap: 10 }}>
             <View style={styles.info}>
               <Icon name="mail" size={20} color={theme.colors.textLight} />
-              <Text style={[styles.infoText, { fontSize: hp(1.8) }]}>{user?.email}</Text>
+              <Text style={[styles.infoText, { fontSize: hp(1.8) }]}>{current_user?.email}</Text>
             </View>
-            {user?.phoneNumber && (
+            {current_user?.phoneNumber && (
               <View style={styles.info}>
                 <Icon name="call" size={20} color={theme.colors.textLight} />
-                <Text style={[styles.infoText, { fontSize: hp(1.8) }]}>{user.phoneNumber}</Text>
+                <Text style={[styles.infoText, { fontSize: hp(1.8) }]}>{current_user.phoneNumber}</Text>
               </View>
             )}
 
-            {user?.bio && <Text style={[styles.infoText]}>{user.bio}</Text>}
+            {current_user?.bio && <Text style={[styles.infoText]}>{current_user.bio}</Text>}
           </View>
         </View>
       </View>

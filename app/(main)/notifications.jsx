@@ -8,11 +8,13 @@ import { useAuth } from '../../contexts/AuthContext'
 import NotificationItem from '../../components/NotificationItem'
 import { theme } from '../../constants/theme'
 import { useRouter } from 'expo-router'
+import { useAppSelector } from "../../redux/hooks"
+import { selectUser } from '../../redux/session/sessionSlice'       
 
 const Notifications = () => {
 
   const [notifications, setNotifications] = useState([]);
-  const {user} = useAuth();
+  const current_user = useAppSelector(selectUser)
   const router = useRouter();
 
   useEffect(()=>{
@@ -20,8 +22,8 @@ const Notifications = () => {
   },[]);
 
   const getNotifications = async ()=>{
-    let res = await fetchNotifications(user.id);
-    if(res.success) setNotifications(res.data);
+    // let res = await fetchNotifications(current_user.id);
+    if(res.success) setNotifications([{'id': 1, 'message': 'You have a new message', 'created_at': '2023-10-01T12:00:00Z', 'senderId': {'id': 1, 'name': 'John Doe', 'image': ''}}]);
   }
   return (
     <ScreenWrapper >

@@ -6,6 +6,9 @@ import store from "../redux/store"
 import { LogBox } from "react-native"
 import useAuth from "../hooks/useAuth"
 import AsyncStorage from "@react-native-async-storage/async-storage"
+import { useAppSelector } from "../redux/hooks"
+import { useDispatch } from 'react-redux';
+import { fetchUser, selectUser } from '../redux/session/sessionSlice'
 
 // Ignore specific warnings
 LogBox.ignoreLogs([
@@ -23,8 +26,10 @@ const _layout = () => {
 }
 
 const MainLayout = () => {
-  const { getCurrentUser, user, isLoggedIn } = useAuth()
+  const userData = useAppSelector(selectUser);
+  // const { getCurrentUser, user, isLoggedIn } = useAuth()
   const router = useRouter()
+  const dispatch = useDispatch()
 
   useEffect(() => {
     // Check authentication status when app starts
@@ -35,9 +40,9 @@ const MainLayout = () => {
 
         if (token) {
           // If we have a token, try to get the current user
-          const success = await getCurrentUser()
+          // const success = await getCurrentUser()
 
-          if (success) {
+          if (userData.value.email) {
             router.replace("/home")
           } else {
             // If getting user fails, redirect to welcome
@@ -58,12 +63,19 @@ const MainLayout = () => {
 
   // Listen for changes in authentication state
   useEffect(() => {
-    if (isLoggedIn && user) {
-      router.replace("/home")
-    } else if (!isLoggedIn && router.pathname !== "/welcome") {
-      router.replace("/welcome")
-    }
-  }, [isLoggedIn, user])
+    const fetchUserData = async () => {
+      try {
+        await dispatch(fetchUser());
+      } catch (error) {
+        flashMessage('error', 'Failed to fetch user')
+      } finally {
+        setFeeds();
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [dispatch]);
 
   return (
     <Stack

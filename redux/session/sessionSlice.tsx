@@ -1,10 +1,7 @@
-import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit"
-import ApiService from "../../services"
-import sessionApi from "../../services/sessionApi"
-import type { RootState } from "../store"
-import AsyncStorage from "@react-native-async-storage/async-storage"
+import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
+import API from '../../services/index'
+import { RootState } from '../store';
 
-// User interface with proper typing
 export interface User {
   readonly id: string
   email: string
@@ -13,213 +10,116 @@ export interface User {
   avatar?: string
 }
 
-// Session state interface
 export interface UserState {
   loggedIn: boolean
-  value: User | null
-  status: "idle" | "loading" | "failed"
-  error: string | null
-  tokens: {
-    accessToken: string | null
-    refreshToken: string | null
-  }
+  value: User
+  status: 'idle' | 'loading' | 'failed'
+  error: string
 }
 
-// Initial state with proper null values
 const initialState: UserState = {
   loggedIn: false,
-  value: null,
-  status: "idle",
-  error: null,
-  tokens: {
-    accessToken: null,
-    refreshToken: null,
-  },
-}
+  value: {} as User,
+  status: 'idle',
+  error: ''
+};
 
-// Login credentials interface
-interface LoginCredentials {
-  email: string
-  password: string
-  remember_me: boolean | string
-}
+export const fetchUser = createAsyncThunk('session/getCurrentUser', async () => {
+  const response = await API.get('/sessions')
+  return response;
+});
 
-// Async thunk for fetching current user
-export const fetchUser = createAsyncThunk("session/getCurrentUser", async (_, { rejectWithValue }) => {
-  try {
-    const response = await ApiService.get("/sessions")
-    return response
-  } catch (error: any) {
-    // Enhanced error handling
-    if (error.response) {
-      return rejectWithValue({
-        status: error.response.status,
-        message: error.response.data?.message || "Failed to fetch user",
-      })
-    }
-    return rejectWithValue({
-      status: 0,
-      message: error.message || "Network error",
-    })
-  }
-})
+// export const userSlice = createSlice({
+//   name: 'user',
+//   initialState,
+//   extraReducers: {
+//     [fetchUsers.pending]: (state) => {
+//       state.loading = true;
+//     },
+//     [fetchUsers.fulfilled]: (state, action) => {
+//       state.loading = false;
+//       state.users = action.payload.user;
+//       state.error = '';
+//     },
+//     [fetchUsers.rejected]: (state, action) => {
+//       state.loading = false;
+//       state.users = [];
+//       state.error = action.payload;
+//     },
+//   }
+// })
 
-// Async thunk for user login
-export const loginUser = createAsyncThunk(
-  "session/login",
-  async (credentials: LoginCredentials, { rejectWithValue }) => {
-    try {
-      const response = await sessionApi.create({
-        session: {
-          email: credentials.email,
-          password: credentials.password,
-          remember_me:
-            typeof credentials.remember_me === "boolean"
-              ? credentials.remember_me
-                ? "true"
-                : "false"
-              : credentials.remember_me,
-        },
-      })
+// export const selectCurrentUser = (state) => state.user.users
 
-      // Check for error response
-      if (response.status && response.status !== 200) {
-        return rejectWithValue({
-          status: response.status,
-          message: response.message || "Login failed",
-          errors: response.errors,
-        })
-      }
+// export default userSlice.reducer;
 
-      return response
-    } catch (error: any) {
-      return rejectWithValue({
-        status: 0,
-        message: error.message || "An unexpected error occurred",
-      })
-    }
-  },
-)
-
-// Async thunk for user logout
-export const logoutUser = createAsyncThunk("session/logout", async (_, { rejectWithValue }) => {
-  try {
-    await sessionApi.destroy()
-    return { success: true }
-  } catch (error: any) {
-    return rejectWithValue({
-      message: error.message || "Logout failed",
-    })
-  }
-})
-
-// Session slice with enhanced functionality
 export const sessionSlice = createSlice({
-  name: "session",
+  name: 'user',
   initialState,
+  // The `reducers` field lets us define reducers and generate associated actions
   reducers: {
-    // Clear error state
-    clearError: (state) => {
-      state.error = null
-    },
+    // increment: (state) => {
+    //   // Redux Toolkit allows us to write "mutating" logic in reducers. It
+    //   // doesn't actually mutate the state because it uses the Immer library,
+    //   // which detects changes to a "draft state" and produces a brand new
+    //   // immutable state based off those changes
+    //   state.value += 1;
+    // },
+    // decrement: (state) => {
+    //   state.value -= 1;
+    // },
+    // // Use the PayloadAction type to declare the contents of `action.payload`
+    // incrementByAmount: (state, action: PayloadAction<number>) => {
+    //   state.value += action.payload;
+    // },
 
-    // Update user profile
-    updateUserProfile: (state, action: PayloadAction<Partial<User>>) => {
-      if (state.value) {
-        state.value = { ...state.value, ...action.payload }
-      }
-    },
-
-    // Set tokens manually (useful for token refresh)
-    setTokens: (state, action: PayloadAction<{ accessToken: string; refreshToken?: string }>) => {
-      state.tokens.accessToken = action.payload.accessToken
-      if (action.payload.refreshToken) {
-        state.tokens.refreshToken = action.payload.refreshToken
-      }
-
-      // Also store in AsyncStorage
-      AsyncStorage.setItem("token", action.payload.accessToken)
-      if (action.payload.refreshToken) {
-        AsyncStorage.setItem("remember_token", action.payload.refreshToken)
-      }
-    },
+    // incrementSaga: (state, action: PayloadAction<number>) => {
+    //   state.status = 'loading';
+    // },
+    // incrementSagaSuccess: (state, action: PayloadAction<number>) => {
+    //   state.status = 'idle';
+    //   state.value += action.payload;
+    // },
   },
+  // The `extraReducers` field lets the slice handle actions defined elsewhere,
+  // including actions generated by createAsyncThunk or in other slices.
   extraReducers: (builder) => {
-    // Handle fetchUser actions
     builder
       .addCase(fetchUser.pending, (state) => {
-        state.status = "loading"
+        state.status = 'loading'
       })
-      .addCase(fetchUser.fulfilled, (state, action: PayloadAction<any>) => {
-        state.status = "idle"
+      .addCase(fetchUser.fulfilled, (state, action: any) => {
+        state.status = 'idle'
         state.loggedIn = true
         state.value = action.payload.user
-        state.error = null
+        state.error = ''
       })
-      .addCase(fetchUser.rejected, (state, action: PayloadAction<any>) => {
-        state.status = "failed"
+      .addCase(fetchUser.rejected, (state, action: any) => {
+        state.status = 'idle'
         state.loggedIn = false
-        state.value = null
-        state.error = action.payload?.message || "Failed to fetch user"
-      })
-
-    // Handle loginUser actions
-    builder
-      .addCase(loginUser.pending, (state) => {
-        state.status = "loading"
-        state.error = null
-      })
-      .addCase(loginUser.fulfilled, (state, action: PayloadAction<any>) => {
-        state.status = "idle"
-        state.loggedIn = true
-        state.value = action.payload.user
-        state.error = null
-
-        // Store tokens
-        if (action.payload.tokens?.access?.token) {
-          state.tokens.accessToken = action.payload.tokens.access.token
-        }
-        if (action.payload.tokens?.refresh?.token) {
-          state.tokens.refreshToken = action.payload.tokens.refresh.token
-        }
-      })
-      .addCase(loginUser.rejected, (state, action: PayloadAction<any>) => {
-        state.status = "failed"
-        state.loggedIn = false
-        state.error = action.payload?.message || "Login failed"
-      })
-
-    // Handle logoutUser actions
-    builder
-      .addCase(logoutUser.pending, (state) => {
-        state.status = "loading"
-      })
-      .addCase(logoutUser.fulfilled, (state) => {
-        // Reset to initial state on logout
-        return {
-          ...initialState,
-          status: "idle",
-        }
-      })
-      .addCase(logoutUser.rejected, (state, action: PayloadAction<any>) => {
-        // Even if API logout fails, we should still clear local state
-        return {
-          ...initialState,
-          status: "failed",
-          error: action.payload?.message || "Logout failed, but local session was cleared",
-        }
-      })
+        state.value = {} as User
+        state.error = action.payload
+      });
   },
-})
+});
 
-// Export actions
-export const { clearError, updateUserProfile, setTokens } = sessionSlice.actions
+// export const { increment, decrement, incrementByAmount, incrementSaga, incrementSagaSuccess } =
+// userSlice.actions;
 
-// Selectors
-export const selectUser = (state: RootState) => state.session.value
-export const selectIsLoggedIn = (state: RootState) => state.session.loggedIn
-export const selectSessionStatus = (state: RootState) => state.session.status
-export const selectSessionError = (state: RootState) => state.session.error
-export const selectTokens = (state: RootState) => state.session.tokens
+// The function below is called a selector and allows us to select a value from
+// the state. Selectors can also be defined inline where they're used instead of
+// in the slice file. For example: `useSelector((state: RootState) => state.counter.value)`
+export const selectUser = (state: RootState) => state.session;
 
-export default sessionSlice.reducer
+// We can also write thunks by hand, which may contain both sync and async logic.
+// Here's an example of conditionally dispatching actions based on current state.
+// export const incrementIfOdd =
+//   (amount: number): AppThunk =>
+//   (dispatch, getState) => {
+//     const currentValue = selectCount(getState());
+//     if (currentValue % 2 === 1) {
+//       dispatch(incrementByAmount(amount));
+//     }
+//   };
+
+export default sessionSlice.reducer;
