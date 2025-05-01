@@ -169,6 +169,8 @@ const HomeScreen = () => {
         {/* Feed */}
         <FlatList
           data={microposts}
+          ListHeaderComponentStyle={{ marginBottom: 30 }}
+          showsVerticalScrollIndicator={false}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
           onEndReached={handleLoadMore}
