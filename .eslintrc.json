@@ -1,0 +1,15 @@
+{
+    "root": true,
+    "extends": ["universe/native", "prettier"],
+    "plugins": ["react", "react-native"],
+    "env": {
+      "react-native/react-native": true
+    },
+    "rules": {
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/explicit-module-boundary-types": "off",
+      "no-unused-vars": "warn",
+      "react/react-in-jsx-scope": "off"
+    }
+  }
+  
