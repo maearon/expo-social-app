@@ -1,5 +1,3 @@
-"use client"
-
 import { View, Text, StyleSheet, Pressable, Alert } from "react-native"
 import { useRef, useState } from "react"
 import ScreenWrapper from "../components/ScreenWrapper"

@@ -1,5 +1,3 @@
-"use client"
-
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from "react-native"
 import { useEffect, useState } from "react"
 import { hp, wp } from "../../helpers/common"

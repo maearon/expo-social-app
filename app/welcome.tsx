@@ -1,5 +1,3 @@
-"use client"
-
 import { View, Text, StyleSheet, Image, Pressable } from "react-native"
 import { StatusBar } from "expo-status-bar"
 import { hp, wp } from "../helpers/common"

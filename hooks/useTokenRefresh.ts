@@ -1,5 +1,3 @@
-"use client"
-
 import { useEffect, useCallback, useRef } from "react"
 import { useDispatch } from "react-redux"
 import { setTokens } from "../redux/session/sessionSlice"

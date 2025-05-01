@@ -1,5 +1,3 @@
-"use client"
-
 import { View, Text, StyleSheet, Pressable, TextInput, FlatList, KeyboardAvoidingView, Platform } from "react-native"
 import { useState, useEffect } from "react"
 import { useLocalSearchParams, useRouter } from "expo-router"

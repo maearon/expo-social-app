@@ -1,5 +1,3 @@
-"use client"
-
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from "react-native"
 import { useEffect, useState } from "react"
 import { SafeAreaView } from "react-native-safe-area-context"

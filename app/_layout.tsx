@@ -1,5 +1,3 @@
-"use client"
-
 import { useEffect } from "react"
 import { Stack, useRouter } from "expo-router"
 import { Provider } from "react-redux"

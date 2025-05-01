@@ -1,5 +1,3 @@
-"use client"
-
 import { View, Text, StyleSheet, FlatList, ListRenderItem } from "react-native"
 import { useEffect, useState, useCallback } from "react"
 import ScreenWrapper from "../../components/ScreenWrapper"

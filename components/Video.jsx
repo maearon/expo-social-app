@@ -1,5 +1,3 @@
-"use client"
-
 import { View, StyleSheet } from "react-native"
 import { useRef } from "react"
 import { useVideoPlayer, VideoView } from "expo-video"

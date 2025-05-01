@@ -1,5 +1,3 @@
-"use client"
-
 import { View, StyleSheet, Image, TouchableOpacity } from "react-native"
 import { useState, useEffect } from "react"
 import VideoPlayer from "./VideoPlayer"

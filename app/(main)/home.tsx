@@ -1,7 +1,5 @@
-"use client"
-
 import { View, Text, StyleSheet, Pressable, FlatList, ListRenderItem } from "react-native"
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import ScreenWrapper from "../../components/ScreenWrapper"
 import { useRouter } from "expo-router"
 import { theme } from "../../constants/theme"
@@ -14,48 +12,34 @@ import { useUser } from "../../redux/hooks"
 import micropostApi, { type Micropost } from "../../services/micropostApi"
 
 interface Metadata {
-  followers: number;
-  following: number;
-  micropost: number;
-  total_count: number;
+  followers: number
+  following: number
+  micropost: number
+  total_count: number
 }
 
 const HomeScreen = () => {
   const user = useUser()
   const router = useRouter()
 
-  // Local state for data that was previously in Redux
   const [microposts, setMicroposts] = useState<Micropost[]>([])
   const [metadata, setMetadata] = useState<Metadata | null>(null)
-  const [loading, setLoading] = useState<boolean>(false)
-  const [hasMore, setHasMore] = useState<boolean>(true)
-  const [notificationCount, setNotificationCount] = useState<number>(0)
-  const [page, setPage] = useState<number>(1)
-  const [refreshing, setRefreshing] = useState<boolean>(false)
+  const [loading, setLoading] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [notificationCount, setNotificationCount] = useState(0)
+  const [page, setPage] = useState(1)
+  const [refreshing, setRefreshing] = useState(false)
 
-  // Fetch microposts directly from API
   const fetchMicroposts = useCallback(
     async (pageNum = 1, shouldAppend = false) => {
       if (loading && !refreshing) return
 
+      setLoading(true)
       try {
-        setLoading(true)
-        // Only pass page parameter - Rails API has fixed perpage of 5
         const response = await micropostApi.getAll({ page: pageNum })
+        const transformed = response.feed_items.map(micropostApi.transformForPostCard)
 
-        // Transform microposts to match PostCard format
-        const transformedMicroposts = response.feed_items.map((micropost) =>
-          micropostApi.transformForPostCard(micropost),
-        )
-
-        // Update state with API response
-        if (shouldAppend) {
-          setMicroposts((prev) => [...prev, ...transformedMicroposts])
-        } else {
-          // When not appending (refreshing), we still want to start from page 1
-          setMicroposts(transformedMicroposts)
-        }
-
+        setMicroposts(prev => (shouldAppend ? [...prev, ...transformed] : transformed))
         setMetadata({
           followers: response.followers,
           following: response.following,
@@ -63,19 +47,14 @@ const HomeScreen = () => {
           total_count: response.total_count,
         })
 
-        // Check if there are more posts to load
-        setHasMore(
-          transformedMicroposts.length > 0 &&
-            (shouldAppend ? microposts.length + transformedMicroposts.length : transformedMicroposts.length) <
-              response.total_count,
-        )
+        const totalLoaded = shouldAppend ? microposts.length + transformed.length : transformed.length
+        setHasMore(totalLoaded < response.total_count)
 
-        // Only update the page number when we're appending
         if (shouldAppend) {
           setPage(pageNum)
         }
-      } catch (error) {
-        console.error("Error fetching microposts:", error)
+      } catch (err) {
+        console.error("Error fetching microposts:", err)
       } finally {
         setLoading(false)
         setRefreshing(false)
@@ -84,53 +63,59 @@ const HomeScreen = () => {
     [loading, refreshing, microposts.length],
   )
 
-  // Fetch notification count directly from API
-  const fetchNotificationCount = useCallback(async () => {
-    // For now, just set a static notification count
-    // You can replace this with an actual API call when ready
-    setNotificationCount(10)
+  const fetchNotificationCount = useCallback(() => {
+    setNotificationCount(10) // Replace with real API call
   }, [])
 
-  // Initial data loading
   useEffect(() => {
-    // Start with page 1
     setPage(1)
     fetchMicroposts(1, false)
     fetchNotificationCount()
 
-    // Set up polling for notifications
-    const notificationInterval = setInterval(() => {
-      fetchNotificationCount()
-    }, 30000) // Check every 30 seconds
+    const interval = setInterval(fetchNotificationCount, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
-    return () => {
-      clearInterval(notificationInterval)
-    }
-  }, [fetchMicroposts, fetchNotificationCount])
-
-  // Handle refresh (pull to refresh)
   const handleRefresh = () => {
     setRefreshing(true)
-    // When refreshing, we want to load the first page but keep our current page number
     fetchMicroposts(1, false)
   }
 
-  // Load more posts when reaching the end
   const handleLoadMore = () => {
     if (!loading && hasMore) {
-      // Load the next page and append to existing posts
       fetchMicroposts(page + 1, true)
     }
   }
 
-  const renderItem: ListRenderItem<Micropost> = ({ item }) => (
-    <PostCard item={item} currentUser={user} router={router} />
+  const renderItem: ListRenderItem<Micropost> = useCallback(
+    ({ item }) => <PostCard item={item} currentUser={user} router={router} />,
+    [user],
   )
+
+  const keyExtractor = (item: Micropost) => String(item.id)
+
+  const listFooter = useMemo(() => {
+    if (loading && !refreshing) {
+      return (
+        <View style={{ marginVertical: microposts.length === 0 ? 200 : 30 }}>
+          <Loading />
+        </View>
+      )
+    }
+    if (!hasMore && microposts.length > 0) {
+      return (
+        <View style={{ marginVertical: 30 }}>
+          <Text style={styles.noPosts}>No more posts</Text>
+        </View>
+      )
+    }
+    return null
+  }, [loading, refreshing, hasMore, microposts.length])
 
   return (
     <ScreenWrapper bg="white">
       <View style={styles.container}>
-        {/* header */}
+        {/* Header */}
         <View style={styles.header}>
           <Pressable>
             <Text style={styles.title}>LinkUp</Text>
@@ -158,7 +143,7 @@ const HomeScreen = () => {
           </View>
         </View>
 
-        {/* User stats */}
+        {/* Stats */}
         {metadata && (
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
@@ -176,28 +161,18 @@ const HomeScreen = () => {
           </View>
         )}
 
-        {/* microposts */}
+        {/* Feed */}
         <FlatList
           data={microposts}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listStyle}
-          keyExtractor={(item) => item.id.toString()}
           renderItem={renderItem}
+          keyExtractor={keyExtractor}
           onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
           onRefresh={handleRefresh}
           refreshing={refreshing}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={
-            loading && !refreshing ? (
-              <View style={{ marginVertical: microposts.length === 0 ? 200 : 30 }}>
-                <Loading />
-              </View>
-            ) : !hasMore && microposts.length > 0 ? (
-              <View style={{ marginVertical: 30 }}>
-                <Text style={styles.noPosts}>No more posts</Text>
-              </View>
-            ) : null
-          }
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listStyle}
+          ListFooterComponent={listFooter}
         />
       </View>
     </ScreenWrapper>
@@ -220,17 +195,8 @@ const styles = StyleSheet.create({
     fontSize: hp(3.2),
     fontWeight: theme.fonts.bold,
   },
-  avatarImage: {
-    height: hp(4.3),
-    width: hp(4.3),
-    borderRadius: theme.radius.sm,
-    borderCurve: "continuous",
-    borderColor: theme.colors.gray,
-    borderWidth: 3,
-  },
   icons: {
     flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
     gap: 18,
   },

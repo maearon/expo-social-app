@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect, useCallback } from "react"
 import NetInfo, { type NetInfoState } from "@react-native-community/netinfo"
 
