@@ -1,4 +1,4 @@
-import API from '.';
+import API from "."
 
 export interface CreateParams {
   password_reset: PasswordResetCreateField
@@ -19,7 +19,7 @@ export interface UpdateResponse {
 }
 
 export interface UpdateParams {
-  email: string,
+  email: string
   user: PasswordResetUpdateField
 }
 
@@ -29,14 +29,26 @@ export interface PasswordResetUpdateField {
 }
 
 const passwordResetApi = {
+  /**
+   * Request password reset
+   * @param params Email to send reset link to
+   * @returns Promise with response
+   */
   create(params: CreateParams): Promise<CreateResponse> {
-    const url = '/password_resets';
-    return API.post(url, params).then(response => response.data as CreateResponse);
+    const url = "/password_resets"
+    return API.post(url, params)
   },
-  update(reset_token: string, params: UpdateParams): Promise<UpdateResponse> {
-    const url = `/password_resets/${reset_token}`;
-    return API.put(url, params).then(response => response.data as UpdateResponse);
-  }
-};
 
-export default passwordResetApi;
+  /**
+   * Reset password with token
+   * @param reset_token Reset token
+   * @param params New password data
+   * @returns Promise with response
+   */
+  update(reset_token: string, params: UpdateParams): Promise<UpdateResponse> {
+    const url = `/password_resets/${reset_token}`
+    return API.put(url, params)
+  },
+}
+
+export default passwordResetApi

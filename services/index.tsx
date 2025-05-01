@@ -1,39 +1,9 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios"
 import AsyncStorage from "@react-native-async-storage/async-storage"
+import { logger } from "./debug-utils"
 
 // Determine if we're in development mode
 const isDev = process.env.NODE_ENV === "development" // React Native's built-in development flag
-
-// Enhanced logger for better debugging
-const logger = {
-  info: (message: string, data?: any) => {
-    if (isDev) {
-      if (data) {
-        console.log(`%c 📘 ${message}`, "color: #3498db; font-weight: bold", data)
-      } else {
-        console.log(`%c 📘 ${message}`, "color: #3498db; font-weight: bold")
-      }
-    }
-  },
-  error: (message: string, error?: any) => {
-    if (isDev) {
-      if (error) {
-        console.error(`%c 🔴 ${message}`, "color: #e74c3c; font-weight: bold", error)
-      } else {
-        console.error(`%c 🔴 ${message}`, "color: #e74c3c; font-weight: bold")
-      }
-    }
-  },
-  success: (message: string, data?: any) => {
-    if (isDev) {
-      if (data) {
-        console.log(`%c ✅ ${message}`, "color: #2ecc71; font-weight: bold", data)
-      } else {
-        console.log(`%c ✅ ${message}`, "color: #2ecc71; font-weight: bold")
-      }
-    }
-  },
-}
 
 let BASE_URL = ""
 if (process.env.NODE_ENV === "development") {
@@ -62,10 +32,7 @@ API.interceptors.request.use(
 
       if (token) {
         if (config.headers) {
-          config.headers.set(
-            "Authorization",
-            `Bearer ${token} ${rememberToken || ""}`
-          )
+          config.headers.Authorization = `Bearer ${token} ${rememberToken || ""}`
         }
       }
 

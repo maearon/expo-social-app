@@ -13,12 +13,16 @@ import Icon from "../assets/icons"
 import Input from "../components/Input"
 import ApiService from "../services"
 
+interface SignUpErrors {
+  [key: string]: string[];
+}
+
 const SignUp = () => {
-  const emailRef = useRef("")
-  const nameRef = useRef("")
-  const passwordRef = useRef("")
-  const passwordConfirmationRef = useRef("")
-  const [loading, setLoading] = useState(false)
+  const emailRef = useRef<string>("")
+  const nameRef = useRef<string>("")
+  const passwordRef = useRef<string>("")
+  const passwordConfirmationRef = useRef<string>("")
+  const [loading, setLoading] = useState<boolean>(false)
 
   const router = useRouter()
 
@@ -60,12 +64,12 @@ const SignUp = () => {
         ])
       } else if (response && response.errors) {
         // Format and display errors
-        const errorMessages = Object.entries(response.errors)
+        const errorMessages = Object.entries(response.errors as SignUpErrors)
           .map(([key, errors]) => `${key} ${errors.join(", ")}`)
           .join("\n")
         Alert.alert("Sign up failed", errorMessages)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Sign up error:", error)
       Alert.alert("Sign up", error.message || "An error occurred during sign up")
     } finally {

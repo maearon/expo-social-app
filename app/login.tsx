@@ -15,9 +15,9 @@ import { useAppDispatch } from "../redux/hooks"
 import { loginUser } from "../redux/session/sessionSlice"
 
 const Login = () => {
-  const emailRef = useRef("")
-  const passwordRef = useRef("")
-  const [loading, setLoading] = useState(false)
+  const emailRef = useRef<string>("")
+  const passwordRef = useRef<string>("")
+  const [loading, setLoading] = useState<boolean>(false)
   const router = useRouter()
   const dispatch = useAppDispatch()
 
@@ -49,9 +49,9 @@ const Login = () => {
         const errorMessage = resultAction.payload?.message || "Email or password incorrect"
         Alert.alert("Login", errorMessage)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error)
-      Alert.alert("Login", error.message || "An error occurred during login")
+      Alert.alert("Login", error.message || "An unexpected error occurred during login")
     } finally {
       setLoading(false)
     }

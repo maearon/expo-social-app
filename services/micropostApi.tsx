@@ -73,7 +73,7 @@ const micropostApi = {
    */
   getAll(params: ListParams): Promise<ListResponse<Micropost>> {
     const url = ""
-    return API.get(url, { params }).then((response) => response.data)
+    return API.get(url, { params })
   },
 
   /**
@@ -83,7 +83,7 @@ const micropostApi = {
    */
   getById(id: number): Promise<Micropost> {
     const url = `/microposts/${id}`
-    return API.get(url).then((response) => response.data as Micropost)
+    return API.get(url)
   },
 
   /**
@@ -104,11 +104,11 @@ const micropostApi = {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      }).then((response) => response.data as Micropost)
+      })
     }
 
     // Otherwise, just send JSON
-    return API.post(url, { content: params.content }).then((response) => response.data as Micropost)
+    return API.post(url, { content: params.content })
   },
 
   /**
@@ -126,16 +126,15 @@ const micropostApi = {
       if (params.content) formData.append("content", params.content)
       formData.append("image", params.image)
 
-      return API.put(url, {
-        data: formData,
+      return API.put(url, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      }).then((response) => response.data as Micropost)
+      })
     }
 
     // Otherwise, just send JSON
-    return API.put(url, params).then((response) => response.data as Micropost)
+    return API.put(url, params)
   },
 
   /**
@@ -145,7 +144,7 @@ const micropostApi = {
    */
   remove(id: number): Promise<Response> {
     const url = `/microposts/${id}`
-    return API.delete(url).then((response) => response.data as Response)
+    return API.delete(url)
   },
 
   /**
@@ -155,7 +154,7 @@ const micropostApi = {
    */
   like(id: number): Promise<Response> {
     const url = `/microposts/${id}/like`
-    return API.post(url, {}).then((response) => response.data as Response)
+    return API.post(url, {})
   },
 
   /**
@@ -165,7 +164,7 @@ const micropostApi = {
    */
   unlike(id: number): Promise<Response> {
     const url = `/microposts/${id}/unlike`
-    return API.delete(url).then((response) => response.data as Response)
+    return API.delete(url)
   },
 
   /**
@@ -188,17 +187,6 @@ const micropostApi = {
   addComment(id: number, content: string): Promise<any> {
     const url = `/microposts/${id}/comments`
     return API.post(url, { content })
-  },
-
-  /**
-   * Rate a YouTube video (like or dislike)
-   * @param videoId YouTube video ID
-   * @param rating Rating value ('like' or 'dislike')
-   * @returns Promise with response
-   */
-  likeOrDislikeYoutubeVideo(videoId: string, rating: string): Promise<Response> {
-    const url = `https://www.googleapis.com/youtube/v3/videos/rate?id=${videoId}&rating=${rating}`
-    return API.post(url, {}).then((response) => response.data as Response)
   },
 
   /**

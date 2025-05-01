@@ -1,37 +1,32 @@
-import { View, Text, StyleSheet } from 'react-native'
-import React, { useRef } from 'react'
-import { useVideoPlayer, VideoView } from 'expo-video';
+"use client"
 
-const Video = ({_source}) => {
-    const source = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
-    const ref = useRef(null);
-    const player = useVideoPlayer(source);
+import { View, StyleSheet } from "react-native"
+import { useRef } from "react"
+import { useVideoPlayer, VideoView } from "expo-video"
+
+const Video = ({ source, style = {} }) => {
+  const videoSource = source || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+  const ref = useRef(null)
+  const player = useVideoPlayer(typeof videoSource === "string" ? videoSource : videoSource.uri)
+
   return (
-    <View style={styles.container}>
-        {
-            player && (
-                <VideoView
-            ref={ref}
-            style={styles.video}
-            player={player}
-            allowsFullscreen
-            allowsPictureInPicture
-        />
-            )
-        }
-      
+    <View style={[styles.container, style]}>
+      {player && (
+        <VideoView ref={ref} style={[styles.video, style]} player={player} allowsFullscreen allowsPictureInPicture />
+      )}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    video: {
-        width: 350,
-        height: 275,
-    },
+  container: {
+    flex: 1,
+  },
+  video: {
+    width: "100%",
+    height: 275,
+    borderRadius: 8,
+  },
 })
 
 export default Video

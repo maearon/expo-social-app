@@ -1,6 +1,5 @@
-// import { ListParams, ListResponse, Student } from 'models';
-import API from '.';
-import { User } from '../redux/session/sessionSlice';
+import API from "."
+import type { User } from "../redux/session/sessionSlice"
 
 export interface UpdateResponse {
   user_id?: string
@@ -15,6 +14,7 @@ export interface UpdateParams {
 export interface ResendActivationEmailField {
   email: string
 }
+
 export interface Response<User> {
   user?: User
   jwt?: string
@@ -23,14 +23,26 @@ export interface Response<User> {
 }
 
 const accountActivationApi = {
+  /**
+   * Request account activation email
+   * @param params Email to send activation to
+   * @returns Promise with response
+   */
   create(params: UpdateParams): Promise<UpdateResponse> {
-    const url = `/account_activations`;
-    return API.post(url, params);
+    const url = `/account_activations`
+    return API.post(url, params)
   },
-  update(activation_token: string, email: string): Promise<Response<User>> {
-    const url = `/account_activations/${activation_token}`;
-    return API.patch(url, {email: email});
-  }
-};
 
-export default accountActivationApi;
+  /**
+   * Activate account with token
+   * @param activation_token Activation token
+   * @param email User email
+   * @returns Promise with response
+   */
+  update(activation_token: string, email: string): Promise<Response<User>> {
+    const url = `/account_activations/${activation_token}`
+    return API.patch(url, { email: email })
+  },
+}
+
+export default accountActivationApi
