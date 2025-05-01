@@ -49,14 +49,23 @@ Join our community of developers creating universal apps.
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
 
-3. Build APK
+3. Build APK and .ipa
 
    ```bash
+    npm install -g expo-cli
+    expo --version
+    npx expo start -c
+
     npm install eas-cli --save-dev
     npx eas build -p android --profile preview
     npx eas build:list
-    wget https://expo.dev/artifacts/eas/axP3gDdj9gN9fvPhG3yPYr.apk -O supa-social-app.apk
+    wget https://expo.dev/artifacts/eas/hChazjL1y1kyectuBN3AF8.apk -O supa-social-app.apk
     emulator -list-avds
     emulator -avd Pixel_4_XL -no-snapshot -no-boot-anim -gpu swiftshader_indirect
+    adb uninstall com.manhng132.supasocialapp
     adb install -r supa-social-app.apk
+
+    npm install -g eas-cli pvnr-ixaf-uqay-fmqe
+    eas login
+    eas build -p ios --profile production
    ```

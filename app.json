@@ -2,6 +2,9 @@
   "expo": {
     "name": "supa-social-app",
     "slug": "supa-social-app",
+    "ios": {
+      "bundleIdentifier": "com.manhng132.supasocialapp"
+    },
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -16,9 +19,6 @@
       "**/*"
     ],
     "reactNativeVersion": "0.76.5",
-    "ios": {
-      "newArchEnabled": true
-    },
     "android": {
       "newArchEnabled": true,
       "adaptiveIcon": {
