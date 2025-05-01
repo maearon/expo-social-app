@@ -24,8 +24,8 @@ const home = () => {
       setError(null)
 
       // Replace with your actual API endpoint for posts
-      const response = await ApiService.get("/posts")
-      setPosts(response)
+      const response = await ApiService.get("")
+      setPosts(response.feed_items)
     } catch (err) {
       console.error("Error fetching posts:", err)
       setError("Failed to load posts. Please try again.")
@@ -51,13 +51,13 @@ const home = () => {
     >
       {item.image && <Image source={{ uri: item.image }} style={styles.postImage} resizeMode="cover" />}
       <View style={styles.postContent}>
-        <Text style={styles.postTitle}>{item.title}</Text>
+        <Text style={styles.postTitle}>{item.content}</Text>
         <Text style={styles.postBody} numberOfLines={2}>
-          {item.body}
+          {item.content}
         </Text>
         <View style={styles.postMeta}>
-          <Text style={styles.postAuthor}>By {item.author || "Unknown"}</Text>
-          <Text style={styles.postDate}>{item.created_at || "Recently"}</Text>
+          <Text style={styles.postAuthor}>By {item.user_name || "Unknown"}</Text>
+          <Text style={styles.postDate}>{item.timestamp || "Recently"}</Text>
         </View>
       </View>
     </TouchableOpacity>
