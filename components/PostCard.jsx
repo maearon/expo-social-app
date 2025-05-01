@@ -132,7 +132,7 @@ const PostCard = ({
           />
           <View style={{ gap: 2 }}>
             <Text style={styles.username}>{item?.user?.name || item?.user_name || "User"}</Text>
-            <Text style={styles.postTime}>{createdAt}</Text>
+            <Text style={styles.postTime}>{item?.timestamp}</Text>
           </View>
         </View>
 
