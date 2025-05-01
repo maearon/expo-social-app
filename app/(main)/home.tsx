@@ -30,6 +30,7 @@ const HomeScreen = () => {
   const [page, setPage] = useState(1)
   const [refreshing, setRefreshing] = useState(false)
 
+  // Fetch microposts with pagination
   const fetchMicroposts = useCallback(
     async (pageNum = 1, shouldAppend = false) => {
       if (loading && !refreshing) return
@@ -72,8 +73,12 @@ const HomeScreen = () => {
     fetchMicroposts(1, false)
     fetchNotificationCount()
 
-    const interval = setInterval(fetchNotificationCount, 30000)
-    return () => clearInterval(interval)
+    const interval1 = setInterval(fetchMicroposts, 30000);
+    const interval2 = setInterval(fetchNotificationCount, 30000);
+    return ()=>{
+      clearInterval(interval1)
+      clearInterval(interval2)
+    }
   }, [])
 
   const handleRefresh = () => {
@@ -95,7 +100,7 @@ const HomeScreen = () => {
   const keyExtractor = (item: Micropost) => String(item.id)
 
   const listFooter = useMemo(() => {
-    if (loading && !refreshing) {
+    if (loading && !refreshing && microposts.length > 0) {
       return (
         <View style={{ marginVertical: microposts.length === 0 ? 200 : 30 }}>
           <Loading />
@@ -118,7 +123,7 @@ const HomeScreen = () => {
         {/* Header */}
         <View style={styles.header}>
           <Pressable>
-            <Text style={styles.title}>LinkUp</Text>
+            <Text style={styles.textPrimary}>bugbook</Text>
           </Pressable>
           <View style={styles.icons}>
             <Pressable
@@ -172,6 +177,17 @@ const HomeScreen = () => {
           refreshing={refreshing}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listStyle}
+          ListEmptyComponent={
+            loading && page === 1 ? (
+              <View style={styles.centerContainer}>
+                <Loading />
+              </View>
+            ) : microposts.length === 0 ? (
+              <View style={styles.centerContainer}>
+                <Text style={styles.noPosts}>No posts found</Text>
+              </View>
+            ) : null
+          }
           ListFooterComponent={listFooter}
         />
       </View>
@@ -189,6 +205,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 10,
     marginHorizontal: wp(4),
+  },
+  textPrimary: {
+    color: theme.colors.primary,
+    fontSize: hp(3.2),
+    fontWeight: theme.fonts.bold,
   },
   title: {
     color: theme.colors.text,
@@ -224,6 +245,12 @@ const styles = StyleSheet.create({
   listStyle: {
     paddingTop: 20,
     paddingHorizontal: wp(4),
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 50,
   },
   noPosts: {
     fontSize: hp(2),

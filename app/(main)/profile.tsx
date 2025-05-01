@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import { View, Text, StyleSheet, Pressable, TouchableOpacity, Alert, FlatList, ListRenderItem } from "react-native"
 import { useRouter } from "expo-router"
 import { hp, wp } from "../../helpers/common"
@@ -45,23 +45,12 @@ const Profile = () => {
     async (pageNum = 1, shouldAppend = false) => {
       if (loading && !refreshing) return
 
+      setLoading(true)
       try {
-        setLoading(true)
-        // Only pass page parameter - Rails API has fixed perpage of 5
-        const response = await micropostApi.getAll({ page: pageNum, user_id: user?.id })
+        const response = await micropostApi.getAll({ page: pageNum })
+        const transformed = response.feed_items.map(micropostApi.transformForPostCard)
 
-        // Transform microposts to match PostCard format
-        const transformedMicroposts = response.feed_items.map((micropost) =>
-          micropostApi.transformForPostCard(micropost),
-        )
-
-        // Update state with API response
-        if (shouldAppend) {
-          setMicroposts((prev) => [...prev, ...transformedMicroposts])
-        } else {
-          setMicroposts(transformedMicroposts)
-        }
-
+        setMicroposts(prev => (shouldAppend ? [...prev, ...transformed] : transformed))
         setMetadata({
           followers: response.followers,
           following: response.following,
@@ -69,31 +58,30 @@ const Profile = () => {
           total_count: response.total_count,
         })
 
-        // Check if there are more posts to load
-        setHasMore(
-          transformedMicroposts.length > 0 &&
-            (shouldAppend ? microposts.length + transformedMicroposts.length : transformedMicroposts.length) <
-              response.total_count,
-        )
+        const totalLoaded = shouldAppend ? microposts.length + transformed.length : transformed.length
+        setHasMore(totalLoaded < response.total_count)
 
-        // Only update the page number when we're appending
         if (shouldAppend) {
           setPage(pageNum)
         }
-      } catch (error) {
-        console.error("Error fetching microposts:", error)
+      } catch (err) {
+        console.error("Error fetching microposts:", err)
       } finally {
         setLoading(false)
         setRefreshing(false)
       }
     },
-    [loading, refreshing, microposts.length, user?.id],
+    [loading, refreshing, microposts.length],
   )
 
   // Initial data loading
   useEffect(() => {
+    setPage(1)
     fetchMicroposts(1, false)
-  }, [fetchMicroposts])
+
+    const interval = setInterval(fetchMicroposts, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   // Handle refresh
   const handleRefresh = () => {
@@ -133,9 +121,30 @@ const Profile = () => {
     ])
   }
 
-  const renderItem: ListRenderItem<Micropost> = ({ item }) => (
-    <PostCard item={item} currentUser={user} router={router} />
+  const renderItem: ListRenderItem<Micropost> = useCallback(
+    ({ item }) => <PostCard item={item} currentUser={user} router={router} />,
+    [user],
   )
+
+  const keyExtractor = (item: Micropost) => String(item.id)
+
+  const listFooter = useMemo(() => {
+    if (loading && !refreshing && microposts.length > 0) {
+      return (
+        <View style={{ marginVertical: microposts.length === 0 ? 200 : 30 }}>
+          <Loading />
+        </View>
+      )
+    }
+    if (!hasMore && microposts.length > 0) {
+      return (
+        <View style={{ marginVertical: 30 }}>
+          <Text style={styles.noPosts}>No more posts</Text>
+        </View>
+      )
+    }
+    return null
+  }, [loading, refreshing, hasMore, microposts.length])
 
   return (
     <ScreenWrapper bg="white">
@@ -144,13 +153,14 @@ const Profile = () => {
         ListHeaderComponent={<UserHeader user={user} handleLogout={handleLogout} router={router} metadata={metadata} />}
         ListHeaderComponentStyle={{ marginBottom: 30 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listStyle}
-        keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
-        onEndReached={handleLoadMore}
+        // keyExtractor={(item) => item.id.toString()}
+        keyExtractor={keyExtractor}
+        onEndReached={handleLoadMore}       
+        onEndReachedThreshold={0.5}
         onRefresh={handleRefresh}
         refreshing={refreshing}
-        onEndReachedThreshold={0.5}
+        contentContainerStyle={styles.listStyle}
         ListEmptyComponent={
           loading && page === 1 ? (
             <View style={styles.centerContainer}>
@@ -162,17 +172,18 @@ const Profile = () => {
             </View>
           ) : null
         }
-        ListFooterComponent={
-          loading && !refreshing && microposts.length > 0 ? (
-            <View style={{ marginVertical: 30 }}>
-              <Loading />
-            </View>
-          ) : !hasMore && microposts.length > 0 ? (
-            <View style={{ marginVertical: 30 }}>
-              <Text style={styles.noPosts}>No more posts</Text>
-            </View>
-          ) : null
-        }
+        // ListFooterComponent={
+        //   loading && !refreshing && microposts.length > 0 ? (
+        //     <View style={{ marginVertical: 30 }}>
+        //       <Loading />
+        //     </View>
+        //   ) : !hasMore && microposts.length > 0 ? (
+        //     <View style={{ marginVertical: 30 }}>
+        //       <Text style={styles.noPosts}>No more posts</Text>
+        //     </View>
+        //   ) : null
+        // }
+        ListFooterComponent={listFooter}
       />
     </ScreenWrapper>
   )

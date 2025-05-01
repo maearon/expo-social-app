@@ -18,7 +18,7 @@ const WelcomePage = () => {
 
         {/* title */}
         <View style={{ gap: 20 }}>
-          <Text style={styles.title}>LinkUp!</Text>
+          <Text style={styles.textPrimary}>BugBook!</Text>
           <Text style={styles.punchline}>Where every thought finds a home and every image tells a story.</Text>
         </View>
 
@@ -54,6 +54,12 @@ const styles = StyleSheet.create({
     height: hp(30),
     width: wp(100),
     alignSelf: "center",
+  },
+  textPrimary: {
+    color: theme.colors.primary,
+    fontSize: hp(4),
+    textAlign: "center",
+    fontWeight: theme.fonts.extraBold,
   },
   title: {
     color: theme.colors.text,
