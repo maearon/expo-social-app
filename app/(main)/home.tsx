@@ -134,17 +134,17 @@ const HomeScreen = () => {
                 </View>
               )}
             </Pressable>
-            <Pressable onPress={() => router.push("newPost")}>
+            <Pressable onPress={() => router.push("/newPost")}>
               <Icon name="plus" size={hp(3.2)} strokeWidth={2} color={theme.colors.text} />
             </Pressable>
-            <Pressable onPress={() => router.push("profile")}>
+            <Pressable onPress={() => router.push("/profile")}>
               <Avatar uri={user?.avatar} size={hp(4.3)} rounded={theme.radius.sm} style={{ borderWidth: 2 }} />
             </Pressable>
           </View>
         </View>
 
         {/* Stats */}
-        {metadata && (
+        {/* {metadata && (
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{metadata.micropost}</Text>
@@ -159,7 +159,7 @@ const HomeScreen = () => {
               <Text style={styles.statLabel}>Following</Text>
             </View>
           </View>
-        )}
+        )} */}
 
         {/* Feed */}
         <FlatList
