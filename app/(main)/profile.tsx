@@ -205,7 +205,7 @@ const UserHeader: React.FC<UserHeaderProps> = ({ user, handleLogout, router, met
           </View>
 
           {/* Stats */}
-          {metadata && (
+          {/* {metadata && (
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
                 <Text style={styles.statValue}>{metadata.micropost || 0}</Text>
@@ -220,7 +220,7 @@ const UserHeader: React.FC<UserHeaderProps> = ({ user, handleLogout, router, met
                 <Text style={styles.statLabel}>Following</Text>
               </View>
             </View>
-          )}
+          )} */}
 
           {/* email, phone */}
           <View style={{ gap: 10 }}>
