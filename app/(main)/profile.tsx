@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback, useMemo } from "react"
-import { View, Text, StyleSheet, Pressable, TouchableOpacity, Alert, FlatList, ListRenderItem } from "react-native"
+import type React from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
+import { View, Text, StyleSheet, Pressable, TouchableOpacity, Alert, FlatList } from "react-native"
 import { useRouter } from "expo-router"
 import { hp, wp } from "../../helpers/common"
 import { theme } from "../../constants/theme"
@@ -15,18 +16,20 @@ import micropostApi, { type Micropost } from "../../services/micropostApi"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 
 interface Metadata {
-  followers: number;
-  following: number;
-  micropost: number;
-  total_count: number;
+  followers: number
+  following: number
+  micropost: number
+  total_count: number
 }
 
 interface UserHeaderProps {
-  user: any;
-  handleLogout: () => void;
-  router: ReturnType<typeof useRouter>;
-  metadata: Metadata | null;
+  user: ReturnType<typeof useUser>
+  handleLogout: () => void
+  router: ReturnType<typeof useRouter>
+  metadata: Metadata | null
 }
+
+const POSTS_PER_PAGE = 5 // Fixed page size from backend
 
 const Profile = () => {
   const router = useRouter()
@@ -34,23 +37,45 @@ const Profile = () => {
   const dispatch = useAppDispatch()
 
   const [microposts, setMicroposts] = useState<Micropost[]>([])
-  const [page, setPage] = useState<number>(1)
-  const [hasMore, setHasMore] = useState<boolean>(true)
+  const [metadata, setMetadata] = useState<Metadata | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
   const [refreshing, setRefreshing] = useState<boolean>(false)
-  const [metadata, setMetadata] = useState<Metadata | null>(null)
 
-  // Fetch microposts with pagination
+  // Refs to track request state and pagination
+  const isRequestInProgress = useRef<boolean>(false)
+  const currentPage = useRef<number>(1)
+  const totalPages = useRef<number>(1)
+  const loadedPostIds = useRef<Set<number>>(new Set())
+
+  // Calculate total pages based on total_count
+  const calculateTotalPages = (totalCount: number): number => {
+    return Math.ceil(totalCount / POSTS_PER_PAGE)
+  }
+
+  // Fetch microposts with optimized logic
   const fetchMicroposts = useCallback(
-    async (pageNum = 1, shouldAppend = false) => {
-      if (loading && !refreshing) return
+    async (page: number, isRefresh = false) => {
+      // Prevent duplicate requests
+      if (isRequestInProgress.current) return
 
-      setLoading(true)
       try {
-        const response = await micropostApi.getAll({ page: pageNum })
-        const transformed = response.feed_items.map(micropostApi.transformForPostCard)
+        isRequestInProgress.current = true
 
-        setMicroposts(prev => (shouldAppend ? [...prev, ...transformed] : transformed))
+        if (isRefresh) {
+          setRefreshing(true)
+        } else if (!refreshing) {
+          setLoading(true)
+        }
+
+        // Fetch posts for the requested page
+        const response = await micropostApi.getAll({ page, user_id: user?.id })
+
+        // Transform microposts to match PostCard format
+        const transformedMicroposts = response.feed_items.map((micropost) =>
+          micropostApi.transformForPostCard(micropost),
+        )
+
+        // Update metadata
         setMetadata({
           followers: response.followers,
           following: response.following,
@@ -58,43 +83,108 @@ const Profile = () => {
           total_count: response.total_count,
         })
 
-        const totalLoaded = shouldAppend ? microposts.length + transformed.length : transformed.length
-        setHasMore(totalLoaded < response.total_count)
+        // Update total pages
+        totalPages.current = calculateTotalPages(response.total_count)
 
-        if (shouldAppend) {
-          setPage(pageNum)
+        if (isRefresh) {
+          // For refresh: Find new posts and add them to the beginning
+          const newPosts = transformedMicroposts.filter((post) => !loadedPostIds.current.has(post.id))
+
+          if (newPosts.length > 0) {
+            // Add new posts to the beginning
+            setMicroposts((prevPosts) => [...newPosts, ...prevPosts])
+
+            // Update loaded post IDs
+            newPosts.forEach((post) => loadedPostIds.current.add(post.id))
+
+            // Recalculate current page based on total loaded posts
+            currentPage.current = Math.ceil((newPosts.length + microposts.length) / POSTS_PER_PAGE)
+          }
+        } else {
+          // For initial load or load more: Append posts that aren't already loaded
+          const postsToAdd = transformedMicroposts.filter((post) => !loadedPostIds.current.has(post.id))
+
+          if (postsToAdd.length > 0) {
+            setMicroposts((prevPosts) => [...prevPosts, ...postsToAdd])
+
+            // Update loaded post IDs
+            postsToAdd.forEach((post) => loadedPostIds.current.add(post.id))
+
+            // Update current page
+            currentPage.current = page
+          }
         }
-      } catch (err) {
-        console.error("Error fetching microposts:", err)
+      } catch (error) {
+        console.error("Error fetching microposts:", error)
       } finally {
+        isRequestInProgress.current = false
         setLoading(false)
         setRefreshing(false)
       }
     },
-    [loading, refreshing, microposts.length],
+    [microposts.length, user?.id],
   )
 
   // Initial data loading
   useEffect(() => {
-    setPage(1)
-    fetchMicroposts(1, false)
+    // Reset state on component mount
+    loadedPostIds.current = new Set()
+    currentPage.current = 1
 
-    const interval = setInterval(fetchMicroposts, 30000)
-    return () => clearInterval(interval)
-  }, [])
+    fetchMicroposts(1)
+  }, [fetchMicroposts])
 
-  // Handle refresh
-  const handleRefresh = () => {
-    setRefreshing(true)
-    fetchMicroposts(1, false)
-  }
-
-  // Load more posts
-  const handleLoadMore = () => {
-    if (!loading && hasMore) {
-      fetchMicroposts(page + 1, true)
+  // Handle refresh (pull to refresh)
+  const handleRefresh = useCallback(() => {
+    // Only refresh if we're not already loading
+    if (!isRequestInProgress.current) {
+      fetchMicroposts(1, true)
     }
-  }
+  }, [fetchMicroposts])
+
+  // Load more posts when reaching the end
+  const handleLoadMore = useCallback(() => {
+    // Only load more if:
+    // 1. We're not already loading
+    // 2. We haven't reached the last page
+    // 3. We're not refreshing
+    if (!isRequestInProgress.current && currentPage.current < totalPages.current && !refreshing) {
+      fetchMicroposts(currentPage.current + 1)
+    }
+  }, [fetchMicroposts, refreshing])
+
+  // Handle post deletion
+  const handleDeletePost = useCallback(
+    async (post: Micropost) => {
+      try {
+        await micropostApi.remove(post.id)
+
+        // Remove post from state
+        setMicroposts((prevPosts) => prevPosts.filter((p) => p.id !== post.id))
+
+        // Remove from loaded IDs
+        loadedPostIds.current.delete(post.id)
+
+        // Update metadata if available
+        if (metadata) {
+          setMetadata({
+            ...metadata,
+            micropost: metadata.micropost - 1,
+            total_count: metadata.total_count - 1,
+          })
+
+          // Recalculate total pages
+          totalPages.current = calculateTotalPages(metadata.total_count - 1)
+        }
+
+        Alert.alert("Success", "Post deleted successfully")
+      } catch (error) {
+        console.error("Error deleting post:", error)
+        Alert.alert("Error", "Failed to delete post")
+      }
+    },
+    [metadata],
+  )
 
   // Handle logout
   const handleLogout = () => {
@@ -121,31 +211,6 @@ const Profile = () => {
     ])
   }
 
-  const renderItem: ListRenderItem<Micropost> = useCallback(
-    ({ item }) => <PostCard item={item} currentUser={user} router={router} />,
-    [user],
-  )
-
-  const keyExtractor = (item: Micropost) => String(item.id)
-
-  const listFooter = useMemo(() => {
-    if (loading && !refreshing && microposts.length > 0) {
-      return (
-        <View style={{ marginVertical: microposts.length === 0 ? 200 : 30 }}>
-          <Loading />
-        </View>
-      )
-    }
-    if (!hasMore && microposts.length > 0) {
-      return (
-        <View style={{ marginVertical: 30 }}>
-          <Text style={styles.noPosts}>No more posts</Text>
-        </View>
-      )
-    }
-    return null
-  }, [loading, refreshing, hasMore, microposts.length])
-
   return (
     <ScreenWrapper bg="white">
       <FlatList
@@ -153,16 +218,33 @@ const Profile = () => {
         ListHeaderComponent={<UserHeader user={user} handleLogout={handleLogout} router={router} metadata={metadata} />}
         ListHeaderComponentStyle={{ marginBottom: 30 }}
         showsVerticalScrollIndicator={false}
-        renderItem={renderItem}
-        // keyExtractor={(item) => item.id.toString()}
-        keyExtractor={keyExtractor}
-        onEndReached={handleLoadMore}       
-        onEndReachedThreshold={0.5}
+        contentContainerStyle={styles.listStyle}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (
+          <PostCard
+            item={item}
+            currentUser={user}
+            router={router}
+            showDelete={true}
+            onDelete={handleDeletePost}
+            onEdit={(post) =>
+              router.push({
+                pathname: "newPost",
+                params: { id: post.id },
+              })
+            }
+          />
+        )}
+        onEndReached={handleLoadMore}
         onRefresh={handleRefresh}
         refreshing={refreshing}
-        contentContainerStyle={styles.listStyle}
+        onEndReachedThreshold={0.5}
+        initialNumToRender={5} // Match backend page size
+        maxToRenderPerBatch={10} // Optimize rendering
+        windowSize={5} // Optimize memory usage
+        removeClippedSubviews={true} // Improve performance
         ListEmptyComponent={
-          loading && page === 1 ? (
+          loading && !refreshing ? (
             <View style={styles.centerContainer}>
               <Loading />
             </View>
@@ -172,18 +254,17 @@ const Profile = () => {
             </View>
           ) : null
         }
-        // ListFooterComponent={
-        //   loading && !refreshing && microposts.length > 0 ? (
-        //     <View style={{ marginVertical: 30 }}>
-        //       <Loading />
-        //     </View>
-        //   ) : !hasMore && microposts.length > 0 ? (
-        //     <View style={{ marginVertical: 30 }}>
-        //       <Text style={styles.noPosts}>No more posts</Text>
-        //     </View>
-        //   ) : null
-        // }
-        ListFooterComponent={listFooter}
+        ListFooterComponent={
+          loading && !refreshing && microposts.length > 0 ? (
+            <View style={{ marginVertical: 30 }}>
+              <Loading />
+            </View>
+          ) : !loading && currentPage.current >= totalPages.current && microposts.length > 0 ? (
+            <View style={{ marginVertical: 30 }}>
+              <Text style={styles.noPosts}>No more posts</Text>
+            </View>
+          ) : null
+        }
       />
     </ScreenWrapper>
   )
@@ -216,7 +297,7 @@ const UserHeader: React.FC<UserHeaderProps> = ({ user, handleLogout, router, met
           </View>
 
           {/* Stats */}
-          {/* {metadata && (
+          {metadata && (
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
                 <Text style={styles.statValue}>{metadata.micropost || 0}</Text>
@@ -231,7 +312,7 @@ const UserHeader: React.FC<UserHeaderProps> = ({ user, handleLogout, router, met
                 <Text style={styles.statLabel}>Following</Text>
               </View>
             </View>
-          )} */}
+          )}
 
           {/* email, phone */}
           <View style={{ gap: 10 }}>

@@ -1,17 +1,19 @@
-import { View, StyleSheet, TextInput } from "react-native"
+import { View, StyleSheet, TextInput, type TextInputProps, type ViewStyle } from "react-native"
 import { theme } from "../constants/theme"
 import { hp } from "../helpers/common"
+import type React from "react"
 
-const Input = (props) => {
+interface InputProps extends TextInputProps {
+  containerStyle?: ViewStyle
+  icon?: React.ReactNode
+  inputRef?: React.RefObject<TextInput>
+}
+
+const Input: React.FC<InputProps> = (props) => {
   return (
     <View style={[styles.container, props.containerStyle && props.containerStyle]}>
       {props.icon && props.icon}
-      <TextInput
-        style={{ flex: 1 }}
-        placeholderTextColor={theme.colors.textLight}
-        ref={props.inputRef && props.inputRef}
-        {...props}
-      />
+      <TextInput style={{ flex: 1 }} placeholderTextColor={theme.colors.textLight} ref={props.inputRef} {...props} />
     </View>
   )
 }

@@ -1,3 +1,5 @@
+"use client"
+
 import { View, Text, StyleSheet, Image, Pressable } from "react-native"
 import { StatusBar } from "expo-status-bar"
 import { hp, wp } from "../helpers/common"
@@ -18,7 +20,7 @@ const WelcomePage = () => {
 
         {/* title */}
         <View style={{ gap: 20 }}>
-          <Text style={styles.textPrimary}>BugBook!</Text>
+          <Text style={styles.titlePrimary}>BookBug!</Text>
           <Text style={styles.punchline}>Where every thought finds a home and every image tells a story.</Text>
         </View>
 
@@ -55,7 +57,7 @@ const styles = StyleSheet.create({
     width: wp(100),
     alignSelf: "center",
   },
-  textPrimary: {
+  titlePrimary: {
     color: theme.colors.primary,
     fontSize: hp(4),
     textAlign: "center",

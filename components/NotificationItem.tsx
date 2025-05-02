@@ -1,16 +1,41 @@
+import type React from "react"
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
 import moment from "moment"
 import Avatar from "./Avatar"
 import { theme } from "../constants/theme"
 import { hp } from "../helpers/common"
+import type { Router } from "expo-router"
 
-const NotificationItem = ({ router, item }) => {
+interface NotificationSender {
+  name: string
+  image?: string
+  avatar?: string
+}
+
+interface NotificationData {
+  postId: number
+  commentId?: number
+  [key: string]: any
+}
+
+interface NotificationItemProps {
+  router: Router
+  item: {
+    id: number
+    title: string
+    data: NotificationData | string
+    created_at: string
+    sender?: NotificationSender
+  }
+}
+
+const NotificationItem: React.FC<NotificationItemProps> = ({ router, item }) => {
   const createdAt = moment(item?.created_at).format("MMM D")
 
   const handleClick = () => {
     try {
       // Parse the data if it's a string, otherwise use it directly
-      const data = typeof item.data === "string" ? JSON.parse(item.data) : item.data
+      const data: NotificationData = typeof item.data === "string" ? JSON.parse(item.data) : item.data
       const { postId, commentId } = data
 
       router.push({

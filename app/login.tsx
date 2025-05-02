@@ -1,3 +1,5 @@
+"use client"
+
 import { View, Text, StyleSheet, Pressable, Alert } from "react-native"
 import { useRef, useState } from "react"
 import ScreenWrapper from "../components/ScreenWrapper"
@@ -49,7 +51,7 @@ const Login = () => {
       }
     } catch (error: any) {
       console.error("Login error:", error)
-      Alert.alert("Login", error.message || "An unexpected error occurred during login")
+      Alert.alert("Login", error.message || "An error occurred during login")
     } finally {
       setLoading(false)
     }

@@ -1,3 +1,5 @@
+"use client"
+
 import { View, Text, Modal, Pressable, StyleSheet, Image } from "react-native"
 import { useState } from "react"
 import { hp, wp } from "../helpers/common"

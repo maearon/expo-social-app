@@ -1,3 +1,5 @@
+"use client"
+
 import { View } from "react-native"
 import { useEffect } from "react"
 import Loading from "../components/Loading"

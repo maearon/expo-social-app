@@ -1,3 +1,5 @@
+"use client"
+
 import { type TypedUseSelectorHook, useDispatch, useSelector } from "react-redux"
 import { useCallback } from "react"
 import type { RootState, AppDispatch } from "./store"
@@ -102,7 +104,7 @@ export const useLoadingDispatch = (setLoading: (loading: boolean) => void) => {
 /**
  * Example of how to use these hooks:
  *
- * ```tsx
+ * \`\`\`tsx
  * import { useUser, useIsLoggedIn, useAppDispatch } from '../redux/hooks';
  * import { loginUser } from '../redux/session/sessionSlice';
  *
@@ -125,5 +127,5 @@ export const useLoadingDispatch = (setLoading: (loading: boolean) => void) => {
  *     </View>
  *   );
  * };
- * ```
+ * \`\`\`
  */

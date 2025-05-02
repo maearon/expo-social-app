@@ -1,3 +1,5 @@
+"use client"
+
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert, TouchableOpacity } from "react-native"
 import { useEffect, useRef, useState } from "react"
 import ScreenWrapper from "../../components/ScreenWrapper"
@@ -16,13 +18,8 @@ import micropostApi from "../../services/micropostApi"
 import { useUser } from "../../redux/hooks"
 
 interface FileObject {
-  uri: string;
-  type?: string;
-  width?: number;
-  height?: number;
-  fileSize?: number;
-  fileName?: string;
-  duration?: number;
+  uri: string
+  type?: string
 }
 
 const NewPost = () => {
@@ -66,7 +63,7 @@ const NewPost = () => {
     const mediaConfig = {
       mediaTypes: isImage ? ImagePicker.MediaTypeOptions.Images : ImagePicker.MediaTypeOptions.Videos,
       allowsEditing: true,
-      aspect: [4, 3] as [number, number],
+      aspect: [4, 3],
       quality: 0.7,
     }
 
@@ -74,16 +71,7 @@ const NewPost = () => {
       const result = await ImagePicker.launchImageLibraryAsync(mediaConfig)
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const asset = result.assets[0]
-        setFile({
-          uri: asset.uri,
-          type: asset.type,
-          width: asset.width,
-          height: asset.height,
-          fileSize: asset.fileSize,
-          fileName: asset.fileName || undefined, // Ensure fileName is not null
-          duration: asset.duration ?? undefined,
-        })
+        setFile(result.assets[0])
       }
     } catch (error) {
       console.error("Error picking media:", error)
@@ -102,7 +90,7 @@ const NewPost = () => {
     setLoading(true)
 
     try {
-      let fileBlob = null
+      let fileBlob: Blob | null = null
       if (file && typeof file === "object" && file.uri) {
         fileBlob = await (await fetch(file.uri)).blob()
       }
@@ -111,13 +99,13 @@ const NewPost = () => {
         // Update existing post
         await micropostApi.update(postId, {
           content: bodyRef.current,
-          image: fileBlob || undefined,
+          image: fileBlob,
         })
       } else {
         // Create new post
         await micropostApi.create({
           content: bodyRef.current,
-          image: fileBlob || undefined,
+          image: fileBlob,
         })
       }
 
@@ -137,20 +125,20 @@ const NewPost = () => {
   }
 
   // Helper functions for file handling
-  const isLocalFile = (fileObj: any): boolean => {
+  const isLocalFile = (fileObj: FileObject | string | null): fileObj is FileObject => {
     if (!fileObj) return false
-    return typeof fileObj === "object" && fileObj.uri
+    return typeof fileObj === "object" && "uri" in fileObj
   }
 
-  const getFileType = (fileObj: any): "video" | "image" | null => {
+  const getFileType = (fileObj: FileObject | string | null): "video" | "image" | null => {
     if (!fileObj) return null
     if (isLocalFile(fileObj)) {
       return fileObj.type?.includes("video") ? "video" : "image"
     }
-    return fileObj.includes(".mp4") ? "video" : "image"
+    return typeof fileObj === "string" && fileObj.includes(".mp4") ? "video" : "image"
   }
 
-  const getFileUri = (fileObj: any): string | null => {
+  const getFileUri = (fileObj: FileObject | string | null): string | null => {
     if (!fileObj) return null
     return isLocalFile(fileObj) ? fileObj.uri : fileObj
   }
@@ -158,12 +146,7 @@ const NewPost = () => {
   return (
     <ScreenWrapper bg="white">
       <View style={styles.container}>
-        <Header 
-          title={postId ? "Edit Post" : "Create Post"} 
-          mb={15} 
-          onBackPress={() => router.back()} 
-          rightComponent={null} 
-        />
+        <Header title={postId ? "Edit Post" : "Create Post"} mb={15} onBackPress={() => router.back()} />
 
         <ScrollView contentContainerStyle={{ gap: 20 }}>
           {/* header */}
@@ -174,13 +157,13 @@ const NewPost = () => {
               <Text style={styles.publicText}>Public</Text>
             </View>
           </View>
-            <View style={styles.textEditor}>
+          <View style={styles.textEditor}>
             <RichTextEditor
               editorRef={editorRef}
               onChange={(body: string) => (bodyRef.current = body)}
               initialValue={bodyRef.current || ""}
             />
-            </View>
+          </View>
           {file && (
             <View style={styles.file}>
               {getFileType(file) === "video" ? (
@@ -216,7 +199,6 @@ const NewPost = () => {
         </ScrollView>
         <Button
           buttonStyle={{ height: hp(6.2) }}
-          textStyle={{ fontSize: hp(2), fontWeight: "600", color: theme.colors.text }}
           title={postId ? "Update" : "Post"}
           loading={loading}
           hasShadow={false}

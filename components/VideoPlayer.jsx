@@ -1,3 +1,5 @@
+"use client"
+
 import { View, StyleSheet, ActivityIndicator } from "react-native"
 import { useState, useRef } from "react"
 import { Video as ExpoVideo } from "expo-av"

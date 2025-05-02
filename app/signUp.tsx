@@ -1,3 +1,5 @@
+"use client"
+
 import { View, Text, StyleSheet, Pressable, Alert } from "react-native"
 import { useRef, useState } from "react"
 import ScreenWrapper from "../components/ScreenWrapper"
@@ -10,10 +12,6 @@ import Button from "../components/Button"
 import Icon from "../assets/icons"
 import Input from "../components/Input"
 import ApiService from "../services"
-
-interface SignUpErrors {
-  [key: string]: string[];
-}
 
 const SignUp = () => {
   const emailRef = useRef<string>("")
@@ -62,7 +60,7 @@ const SignUp = () => {
         ])
       } else if (response && response.errors) {
         // Format and display errors
-        const errorMessages = Object.entries(response.errors as SignUpErrors)
+        const errorMessages = Object.entries(response.errors)
           .map(([key, errors]) => `${key} ${errors.join(", ")}`)
           .join("\n")
         Alert.alert("Sign up failed", errorMessages)

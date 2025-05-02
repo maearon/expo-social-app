@@ -1,8 +1,16 @@
+import type React from "react"
 import { Pressable, StyleSheet } from "react-native"
 import { theme } from "../constants/theme"
 import Icon from "../assets/icons"
+import type { Router } from "expo-router"
 
-const BackButton = ({ router, size = 26, onPress }) => {
+interface BackButtonProps {
+  router: Router
+  size?: number
+  onPress?: () => void
+}
+
+const BackButton: React.FC<BackButtonProps> = ({ router, size = 26, onPress }) => {
   const handlePress = () => {
     if (onPress) {
       onPress()

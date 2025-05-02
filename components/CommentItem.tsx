@@ -1,3 +1,4 @@
+import type React from "react"
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native"
 import moment from "moment"
 import Avatar from "./Avatar"
@@ -5,7 +6,32 @@ import { theme } from "../constants/theme"
 import { hp } from "../helpers/common"
 import Icon from "../assets/icons"
 
-const CommentItem = ({ item, canDelete = false, onDelete = () => {}, highlight = false }) => {
+interface CommentUser {
+  name: string
+  image?: string
+  avatar?: string
+}
+
+interface CommentItemProps {
+  item: {
+    id: number
+    text?: string
+    content?: string
+    created_at?: string
+    timestamp?: string
+    user?: CommentUser
+  }
+  canDelete?: boolean
+  onDelete?: (item: any) => void
+  highlight?: boolean
+}
+
+const CommentItem: React.FC<CommentItemProps> = ({
+  item,
+  canDelete = false,
+  onDelete = () => {},
+  highlight = false,
+}) => {
   const createdAt = moment(item?.created_at || item?.timestamp).format("MMM D")
 
   const handleDelete = () => {

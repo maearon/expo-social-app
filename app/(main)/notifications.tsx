@@ -1,4 +1,6 @@
-import { View, Text, StyleSheet, FlatList, ListRenderItem } from "react-native"
+"use client"
+
+import { View, Text, StyleSheet, FlatList } from "react-native"
 import { useEffect, useState, useCallback } from "react"
 import ScreenWrapper from "../../components/ScreenWrapper"
 import Header from "../../components/Header"
@@ -11,23 +13,24 @@ import ApiService from "../../services"
 import Loading from "../../components/Loading"
 
 interface Notification {
-  id: number;
-  title: string;
-  content: string;
-  read: boolean;
-  created_at: string;
-  updated_at: string;
+  id: number
+  title: string
+  content: string
+  read: boolean
+  created_at: string
   sender?: {
-    id: string;
-    name: string;
-    image?: string;
-    avatar?: string;
-  };
-  data: string | {
-    postId: number;
-    commentId?: number;
-    [key: string]: any;
-  };
+    id: string
+    name: string
+    image?: string
+    avatar?: string
+  }
+  data:
+    | string
+    | {
+        postId: number
+        commentId?: number
+        [key: string]: any
+      }
 }
 
 const Notifications = () => {
@@ -48,7 +51,7 @@ const Notifications = () => {
       try {
         setLoading(true)
         // Call the API to get notifications
-        const response = await ApiService.get("/notifications", { page: pageNum })
+        const response = await ApiService.get("/notifications", { params: { page: pageNum } })
 
         if (response) {
           if (shouldAppend) {
@@ -104,10 +107,6 @@ const Notifications = () => {
     }
   }
 
-  const renderItem: ListRenderItem<Notification> = ({ item }) => (
-    <NotificationItem key={item.id} item={item} router={router} />
-  )
-
   return (
     <ScreenWrapper>
       <View style={styles.container}>
@@ -118,7 +117,7 @@ const Notifications = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listStyle}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={renderItem}
+          renderItem={({ item }) => <NotificationItem key={item.id} item={item} router={router} />}
           onEndReached={handleLoadMore}
           onRefresh={handleRefresh}
           refreshing={refreshing}

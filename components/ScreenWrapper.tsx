@@ -1,7 +1,14 @@
-import { View, StyleSheet, SafeAreaView, StatusBar, Platform } from "react-native"
+import { View, StyleSheet, SafeAreaView, StatusBar, Platform, type ViewStyle } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import type React from "react"
 
-const ScreenWrapper = ({ children, bg = "#f5f5f5", style = {} }) => {
+interface ScreenWrapperProps {
+  children: React.ReactNode
+  bg?: string
+  style?: ViewStyle
+}
+
+const ScreenWrapper: React.FC<ScreenWrapperProps> = ({ children, bg = "#f5f5f5", style = {} }) => {
   const insets = useSafeAreaInsets()
 
   return (

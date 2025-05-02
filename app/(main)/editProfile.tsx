@@ -1,3 +1,5 @@
+"use client"
+
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from "react-native"
 import { useEffect, useState } from "react"
 import { hp, wp } from "../../helpers/common"
@@ -11,7 +13,7 @@ import Header from "../../components/Header"
 import Icon from "../../assets/icons"
 import Input from "../../components/Input"
 import { useUser, useAppDispatch } from "../../redux/hooks"
-import updateUserProfile from "../../redux/session/sessionSlice"
+import { updateUserProfile } from "../../redux/session/sessionSlice"
 import ApiService from "../../services"
 import type { User } from "../../redux/session/sessionSlice"
 
@@ -22,13 +24,6 @@ interface FormData {
   image: string | null
   bio: string
   address: string
-}
-
-// Interface for image picker result
-interface ImagePickerResult {
-  uri: string
-  type?: string
-  name?: string
 }
 
 const EditProfile = () => {
@@ -102,15 +97,11 @@ const EditProfile = () => {
       if (formData.image && formData.image !== user?.avatar) {
         // Create a form data object for the image
         const imageFormData = new FormData()
-
-        // Add the image to form data with proper typing
-        const imageFile = {
+        imageFormData.append("avatar", {
           uri: formData.image,
           type: "image/jpeg",
           name: "profile-image.jpg",
-        } as unknown as Blob
-
-        imageFormData.append("avatar", imageFile)
+        } as unknown as Blob)
 
         // Upload the image
         await ApiService.post("/users/upload-avatar", imageFormData, {
@@ -127,7 +118,7 @@ const EditProfile = () => {
       await ApiService.put(`/users/${user?.id}`, { user: userData })
 
       // Update Redux state
-      dispatch(updateUserProfile("UPDATE_USER_PROFILE", userData))
+      dispatch(updateUserProfile(userData))
 
       Alert.alert("Success", "Profile updated successfully")
       router.back()
@@ -143,17 +134,13 @@ const EditProfile = () => {
     <ScreenWrapper bg="white">
       <View style={styles.container}>
         <ScrollView style={{ flex: 1 }}>
-          <Header 
-            title="Edit Profile" 
-            onBackPress={() => router.back()} 
-            rightComponent={null} 
-          />
+          <Header title="Edit Profile" onBackPress={() => router.back()} />
 
           {/* form */}
           <View style={styles.form}>
             <View style={styles.avatarContainer}>
               <Image
-                source={formData.image || require("../../assets/images/avatar-placeholder.png")}
+                source={formData.image || require("../../assets/images/default-avatar.png")}
                 style={styles.avatar}
                 contentFit="cover"
               />
@@ -199,7 +186,7 @@ const EditProfile = () => {
             />
 
             {/* button */}
-            <Button title="Update" loading={loading} onPress={onSubmit} buttonStyle={undefined} textStyle={undefined} />
+            <Button title="Update" loading={loading} onPress={onSubmit} />
           </View>
         </ScrollView>
       </View>

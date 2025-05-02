@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TextInput, FlatList, Pressable, ListRenderItem } from "react-native"
+import { View, Text, StyleSheet, TextInput, FlatList, Pressable } from "react-native"
 import { useState, useCallback } from "react"
 import ScreenWrapper from "../../components/ScreenWrapper"
 import Header from "../../components/Header"
@@ -12,10 +12,10 @@ import { useUser } from "../../redux/hooks"
 import ApiService from "../../services"
 
 interface User {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
+  id: string
+  name: string
+  email: string
+  avatar?: string
 }
 
 const Search = () => {
@@ -37,7 +37,7 @@ const Search = () => {
 
     try {
       setLoading(true)
-      const response = await ApiService.get("/users/search", { query: searchQuery })
+      const response = await ApiService.get("/users/search", { params: { query: searchQuery } })
 
       if (response) {
         setResults(response)
@@ -76,16 +76,6 @@ const Search = () => {
     }
   }
 
-  const renderItem: ListRenderItem<User> = ({ item }) => (
-    <Pressable style={styles.userItem} onPress={() => navigateToProfile(item.id)}>
-      <Avatar uri={item.avatar} size={hp(6)} rounded={theme.radius.full} />
-      <View style={styles.userInfo}>
-        <Text style={styles.userName}>{item.name}</Text>
-        <Text style={styles.userEmail}>{item.email}</Text>
-      </View>
-    </Pressable>
-  )
-
   return (
     <ScreenWrapper>
       <View style={styles.container}>
@@ -116,7 +106,15 @@ const Search = () => {
           <FlatList
             data={results}
             keyExtractor={(item) => item.id.toString()}
-            renderItem={renderItem}
+            renderItem={({ item }) => (
+              <Pressable style={styles.userItem} onPress={() => navigateToProfile(item.id)}>
+                <Avatar uri={item.avatar} size={hp(6)} rounded={theme.radius.full} />
+                <View style={styles.userInfo}>
+                  <Text style={styles.userName}>{item.name}</Text>
+                  <Text style={styles.userEmail}>{item.email}</Text>
+                </View>
+              </Pressable>
+            )}
             ListEmptyComponent={
               searched && !loading ? (
                 <View style={styles.centerContainer}>

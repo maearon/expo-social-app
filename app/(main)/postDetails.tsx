@@ -1,15 +1,29 @@
+"use client"
+
 import { View, Text, StyleSheet, Pressable, TextInput, FlatList, KeyboardAvoidingView, Platform } from "react-native"
 import { useState, useEffect } from "react"
 import { useLocalSearchParams, useRouter } from "expo-router"
 import ScreenWrapper from "../../components/ScreenWrapper"
 import { theme } from "../../constants/theme"
-import { hp, wp, formatTimeAgo } from "../../helpers/common"
+import { hp, wp } from "../../helpers/common"
 import { Image } from "expo-image"
 import Icon from "../../assets/icons"
 import Avatar from "../../components/Avatar"
 import Loading from "../../components/Loading"
 import { useUser } from "../../redux/hooks" // Only import user from Redux
-import micropostApi from "../../services/micropostApi" // Import API service directly
+import micropostApi, { type Micropost } from "../../services/micropostApi" // Import API service directly
+
+interface Comment {
+  id: number
+  content: string
+  user?: {
+    id: string
+    name: string
+    avatar?: string
+  }
+  created_at: string
+  timestamp?: string
+}
 
 const PostDetailsScreen = () => {
   const { id } = useLocalSearchParams()
@@ -17,13 +31,13 @@ const PostDetailsScreen = () => {
   const user = useUser() // Get user from Redux
 
   // Local state
-  const [post, setPost] = useState(null)
-  const [comments, setComments] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [commentLoading, setCommentLoading] = useState(false)
-  const [newComment, setNewComment] = useState("")
-  const [isLiked, setIsLiked] = useState(false)
-  const [likeCount, setLikeCount] = useState(0)
+  const [post, setPost] = useState<Micropost | null>(null)
+  const [comments, setComments] = useState<Comment[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
+  const [commentLoading, setCommentLoading] = useState<boolean>(false)
+  const [newComment, setNewComment] = useState<string>("")
+  const [isLiked, setIsLiked] = useState<boolean>(false)
+  const [likeCount, setLikeCount] = useState<number>(0)
 
   // Fetch post and comments
   useEffect(() => {
@@ -70,6 +84,32 @@ const PostDetailsScreen = () => {
     }
   }
 
+  // Format time ago
+  const formatTimeAgo = (timestamp: string | undefined): string => {
+    if (!timestamp) return ""
+
+    const now = new Date()
+    const date = new Date(timestamp)
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+    if (seconds < 60) return "just now"
+
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return `${minutes}m ago`
+
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours}h ago`
+
+    const days = Math.floor(hours / 24)
+    if (days < 30) return `${days}d ago`
+
+    const months = Math.floor(days / 30)
+    if (months < 12) return `${months}mo ago`
+
+    const years = Math.floor(months / 12)
+    return `${years}y ago`
+  }
+
   // Submit a new comment
   const handleSubmitComment = async () => {
     if (!newComment.trim()) return
@@ -85,9 +125,9 @@ const PostDetailsScreen = () => {
           id: response.id || Date.now(),
           content: newComment,
           user: {
-            id: user.id,
-            name: user.name,
-            avatar: user.avatar,
+            id: user?.id || "",
+            name: user?.name || "",
+            avatar: user?.avatar,
           },
           created_at: new Date().toISOString(),
         },

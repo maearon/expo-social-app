@@ -1,9 +1,26 @@
+import type React from "react"
 import { Text, StyleSheet, Pressable, View } from "react-native"
 import { hp } from "../helpers/common"
 import { theme } from "../constants/theme"
 import Loading from "./Loading"
 
-const Button = ({ buttonStyle, textStyle, title = "", onPress = () => {}, loading = false, hasShadow = true }) => {
+interface ButtonProps {
+  buttonStyle?: object
+  textStyle?: object
+  title?: string
+  onPress?: () => void
+  loading?: boolean
+  hasShadow?: boolean
+}
+
+const Button: React.FC<ButtonProps> = ({
+  buttonStyle,
+  textStyle,
+  title = "",
+  onPress = () => {},
+  loading = false,
+  hasShadow = true,
+}) => {
   const shadowStyle = {
     shadowColor: theme.colors.dark,
     shadowOffset: { width: 0, height: 10 },

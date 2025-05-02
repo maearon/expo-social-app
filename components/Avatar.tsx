@@ -1,14 +1,22 @@
+import type React from "react"
 import { StyleSheet } from "react-native"
 import { hp } from "../helpers/common"
 import { theme } from "../constants/theme"
 import { Image } from "expo-image"
 
-const Avatar = ({ uri, size = hp(4.5), rounded = theme.radius.md, style = {} }) => {
+interface AvatarProps {
+  uri?: string
+  size?: number
+  rounded?: number
+  style?: object
+}
+
+const Avatar: React.FC<AvatarProps> = ({ uri, size = hp(4.5), rounded = theme.radius.md, style = {} }) => {
   // Default placeholder image if no URI is provided
   const defaultImage = "https://via.placeholder.com/150?text=User"
 
   // Process the image URI
-  const getImageSource = (imageUri) => {
+  const getImageSource = (imageUri?: string): string => {
     if (!imageUri) return defaultImage
 
     // If it's already a complete URL, use it directly

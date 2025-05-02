@@ -1,3 +1,5 @@
+"use client"
+
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native"
 import { useState, useEffect } from "react"
 import { theme } from "../constants/theme"

@@ -1,8 +1,17 @@
-import { View, StyleSheet } from "react-native"
+"use client"
+
+import type React from "react"
+
+import { View, StyleSheet, type ViewStyle } from "react-native"
 import { useRef } from "react"
 import { useVideoPlayer, VideoView } from "expo-video"
 
-const Video = ({ source, style = {} }) => {
+interface VideoProps {
+  source?: string | { uri: string }
+  style?: ViewStyle
+}
+
+const Video: React.FC<VideoProps> = ({ source, style = {} }) => {
   const videoSource = source || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
   const ref = useRef(null)
   const player = useVideoPlayer(typeof videoSource === "string" ? videoSource : videoSource.uri)

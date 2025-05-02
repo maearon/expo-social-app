@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, Pressable, FlatList, ListRenderItem } from "react-native"
-import { useEffect, useState, useCallback, useMemo } from "react"
+import { View, Text, StyleSheet, Pressable, FlatList } from "react-native"
+import { useEffect, useState, useCallback, useRef } from "react"
 import ScreenWrapper from "../../components/ScreenWrapper"
 import { useRouter } from "expo-router"
 import { theme } from "../../constants/theme"
@@ -18,29 +18,54 @@ interface Metadata {
   total_count: number
 }
 
+const POSTS_PER_PAGE = 5 // Fixed page size from backend
+
 const HomeScreen = () => {
   const user = useUser()
   const router = useRouter()
 
+  // Local state for data
   const [microposts, setMicroposts] = useState<Micropost[]>([])
   const [metadata, setMetadata] = useState<Metadata | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [hasMore, setHasMore] = useState(true)
-  const [notificationCount, setNotificationCount] = useState(0)
-  const [page, setPage] = useState(1)
-  const [refreshing, setRefreshing] = useState(false)
+  const [loading, setLoading] = useState<boolean>(false)
+  const [refreshing, setRefreshing] = useState<boolean>(false)
+  const [notificationCount, setNotificationCount] = useState<number>(0)
 
-  // Fetch microposts with pagination
+  // Refs to track request state and pagination
+  const isRequestInProgress = useRef<boolean>(false)
+  const currentPage = useRef<number>(1)
+  const totalPages = useRef<number>(1)
+  const loadedPostIds = useRef<Set<number>>(new Set())
+
+  // Calculate total pages based on total_count
+  const calculateTotalPages = (totalCount: number): number => {
+    return Math.ceil(totalCount / POSTS_PER_PAGE)
+  }
+
+  // Fetch microposts with optimized logic
   const fetchMicroposts = useCallback(
-    async (pageNum = 1, shouldAppend = false) => {
-      if (loading && !refreshing) return
+    async (page: number, isRefresh = false) => {
+      // Prevent duplicate requests
+      if (isRequestInProgress.current) return
 
-      setLoading(true)
       try {
-        const response = await micropostApi.getAll({ page: pageNum })
-        const transformed = response.feed_items.map(micropostApi.transformForPostCard)
+        isRequestInProgress.current = true
 
-        setMicroposts(prev => (shouldAppend ? [...prev, ...transformed] : transformed))
+        if (isRefresh) {
+          setRefreshing(true)
+        } else if (!refreshing) {
+          setLoading(true)
+        }
+
+        // Fetch posts for the requested page
+        const response = await micropostApi.getAll({ page })
+
+        // Transform microposts to match PostCard format
+        const transformedMicroposts = response.feed_items.map((micropost) =>
+          micropostApi.transformForPostCard(micropost),
+        )
+
+        // Update metadata
         setMetadata({
           followers: response.followers,
           following: response.following,
@@ -48,82 +73,103 @@ const HomeScreen = () => {
           total_count: response.total_count,
         })
 
-        const totalLoaded = shouldAppend ? microposts.length + transformed.length : transformed.length
-        setHasMore(totalLoaded < response.total_count)
+        // Update total pages
+        totalPages.current = calculateTotalPages(response.total_count)
 
-        if (shouldAppend) {
-          setPage(pageNum)
+        if (isRefresh) {
+          // For refresh: Find new posts and add them to the beginning
+          const newPosts = transformedMicroposts.filter((post) => !loadedPostIds.current.has(post.id))
+
+          if (newPosts.length > 0) {
+            // Add new posts to the beginning
+            setMicroposts((prevPosts) => [...newPosts, ...prevPosts])
+
+            // Update loaded post IDs
+            newPosts.forEach((post) => loadedPostIds.current.add(post.id))
+
+            // Recalculate current page based on total loaded posts
+            currentPage.current = Math.ceil((newPosts.length + microposts.length) / POSTS_PER_PAGE)
+          }
+        } else {
+          // For initial load or load more: Append posts that aren't already loaded
+          const postsToAdd = transformedMicroposts.filter((post) => !loadedPostIds.current.has(post.id))
+
+          if (postsToAdd.length > 0) {
+            setMicroposts((prevPosts) => [...prevPosts, ...postsToAdd])
+
+            // Update loaded post IDs
+            postsToAdd.forEach((post) => loadedPostIds.current.add(post.id))
+
+            // Update current page
+            currentPage.current = page
+          }
         }
-      } catch (err) {
-        console.error("Error fetching microposts:", err)
+      } catch (error) {
+        console.error("Error fetching microposts:", error)
       } finally {
+        isRequestInProgress.current = false
         setLoading(false)
         setRefreshing(false)
       }
     },
-    [loading, refreshing, microposts.length],
+    [microposts.length],
   )
 
-  const fetchNotificationCount = useCallback(() => {
-    setNotificationCount(10) // Replace with real API call
+  // Fetch notification count
+  const fetchNotificationCount = useCallback(async () => {
+    try {
+      const response = await micropostApi.getUnreadCount()
+      setNotificationCount(response || 0)
+    } catch (error) {
+      console.error("Error fetching notification count:", error)
+    }
   }, [])
 
+  // Initial data loading
   useEffect(() => {
-    setPage(1)
-    fetchMicroposts(1, false)
+    // Reset state on component mount
+    loadedPostIds.current = new Set()
+    currentPage.current = 1
+
+    fetchMicroposts(1)
     fetchNotificationCount()
 
-    const interval1 = setInterval(fetchMicroposts, 30000);
-    const interval2 = setInterval(fetchNotificationCount, 30000);
-    return ()=>{
-      clearInterval(interval1)
-      clearInterval(interval2)
+    // Set up polling for notifications (with a longer interval to reduce server load)
+    const notificationInterval = setInterval(() => {
+      fetchNotificationCount()
+    }, 60000) // Check every minute instead of 30 seconds
+
+    return () => {
+      clearInterval(notificationInterval)
     }
-  }, [])
+  }, [fetchMicroposts, fetchNotificationCount])
 
-  const handleRefresh = () => {
-    setRefreshing(true)
-    fetchMicroposts(1, false)
-  }
-
-  const handleLoadMore = () => {
-    if (!loading && hasMore) {
-      fetchMicroposts(page + 1, true)
+  // Handle refresh (pull to refresh)
+  const handleRefresh = useCallback(() => {
+    // Only refresh if we're not already loading
+    if (!isRequestInProgress.current) {
+      fetchMicroposts(1, true)
     }
-  }
+  }, [fetchMicroposts])
 
-  const renderItem: ListRenderItem<Micropost> = useCallback(
-    ({ item }) => <PostCard item={item} currentUser={user} router={router} />,
-    [user],
-  )
-
-  const keyExtractor = (item: Micropost) => String(item.id)
-
-  const listFooter = useMemo(() => {
-    if (loading && !refreshing && microposts.length > 0) {
-      return (
-        <View style={{ marginVertical: microposts.length === 0 ? 200 : 30 }}>
-          <Loading />
-        </View>
-      )
+  // Load more posts when reaching the end
+  const handleLoadMore = useCallback(() => {
+    // Only load more if:
+    // 1. We're not already loading
+    // 2. We haven't reached the last page
+    // 3. We're not refreshing
+    if (!isRequestInProgress.current && currentPage.current < totalPages.current && !refreshing) {
+      fetchMicroposts(currentPage.current + 1)
     }
-    if (!hasMore && microposts.length > 0) {
-      return (
-        <View style={{ marginVertical: 30 }}>
-          <Text style={styles.noPosts}>No more posts</Text>
-        </View>
-      )
-    }
-    return null
-  }, [loading, refreshing, hasMore, microposts.length])
+  }, [fetchMicroposts, refreshing])
 
   return (
     <ScreenWrapper bg="white">
       <View style={styles.container}>
-        {/* Header */}
+        {/* header */}
         <View style={styles.header}>
           <Pressable>
-            <Text style={styles.textPrimary}>bugbook</Text>
+            <Text style={styles.titlePrimary}>bookbug</Text>
           </Pressable>
           <View style={styles.icons}>
             <Pressable
@@ -139,17 +185,17 @@ const HomeScreen = () => {
                 </View>
               )}
             </Pressable>
-            <Pressable onPress={() => router.push("/newPost")}>
+            <Pressable onPress={() => router.push("newPost")}>
               <Icon name="plus" size={hp(3.2)} strokeWidth={2} color={theme.colors.text} />
             </Pressable>
-            <Pressable onPress={() => router.push("/profile")}>
+            <Pressable onPress={() => router.push("profile")}>
               <Avatar uri={user?.avatar} size={hp(4.3)} rounded={theme.radius.sm} style={{ borderWidth: 2 }} />
             </Pressable>
           </View>
         </View>
 
-        {/* Stats */}
-        {/* {metadata && (
+        {/* User stats */}
+        {metadata && (
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{metadata.micropost}</Text>
@@ -164,33 +210,34 @@ const HomeScreen = () => {
               <Text style={styles.statLabel}>Following</Text>
             </View>
           </View>
-        )} */}
+        )}
 
-        {/* Feed */}
+        {/* microposts */}
         <FlatList
           data={microposts}
-          ListHeaderComponentStyle={{ marginBottom: 30 }}
-          showsVerticalScrollIndicator={false}
-          renderItem={renderItem}
-          keyExtractor={keyExtractor}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
-          onRefresh={handleRefresh}
-          refreshing={refreshing}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listStyle}
-          ListEmptyComponent={
-            loading && page === 1 ? (
-              <View style={styles.centerContainer}>
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => <PostCard item={item} currentUser={user} router={router} />}
+          onEndReached={handleLoadMore}
+          onRefresh={handleRefresh}
+          refreshing={refreshing}
+          onEndReachedThreshold={0.5}
+          initialNumToRender={5} // Match backend page size
+          maxToRenderPerBatch={10} // Optimize rendering
+          windowSize={5} // Optimize memory usage
+          removeClippedSubviews={true} // Improve performance
+          ListFooterComponent={
+            loading && !refreshing ? (
+              <View style={{ marginVertical: microposts.length === 0 ? 200 : 30 }}>
                 <Loading />
               </View>
-            ) : microposts.length === 0 ? (
-              <View style={styles.centerContainer}>
-                <Text style={styles.noPosts}>No posts found</Text>
+            ) : !loading && currentPage.current >= totalPages.current && microposts.length > 0 ? (
+              <View style={{ marginVertical: 30 }}>
+                <Text style={styles.noPosts}>No more posts</Text>
               </View>
             ) : null
           }
-          ListFooterComponent={listFooter}
         />
       </View>
     </ScreenWrapper>
@@ -208,7 +255,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginHorizontal: wp(4),
   },
-  textPrimary: {
+  titlePrimary: {
     color: theme.colors.primary,
     fontSize: hp(3.2),
     fontWeight: theme.fonts.bold,
@@ -218,8 +265,17 @@ const styles = StyleSheet.create({
     fontSize: hp(3.2),
     fontWeight: theme.fonts.bold,
   },
+  avatarImage: {
+    height: hp(4.3),
+    width: hp(4.3),
+    borderRadius: theme.radius.sm,
+    borderCurve: "continuous",
+    borderColor: theme.colors.gray,
+    borderWidth: 3,
+  },
   icons: {
     flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
     gap: 18,
   },
@@ -247,12 +303,6 @@ const styles = StyleSheet.create({
   listStyle: {
     paddingTop: 20,
     paddingHorizontal: wp(4),
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingTop: 50,
   },
   noPosts: {
     fontSize: hp(2),

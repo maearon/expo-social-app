@@ -1,3 +1,5 @@
+"use client"
+
 import { View, Text, StyleSheet } from "react-native"
 import { theme } from "../constants/theme"
 import { actions, RichEditor, RichToolbar } from "react-native-pell-rich-editor"
